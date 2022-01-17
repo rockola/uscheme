@@ -67,13 +67,13 @@ makefile) are well commented and quite simple.
 Initializing an interpreter happens by creating an object of the type
 Interpreter. You can only have one of these alive at a time. You can
 then load in scheme files with
-
+```
 void Load_File(const std::string& filename)
-
+```
 And to evaluate a string use
-
+```
 Cell Eval_String(const std::string& str, bool handle_errors)
-
+```
 The second argument indicates whether exceptions should be let out or
 handled by the interpreter. The return value is the result of
 evaluating the string.
@@ -92,17 +92,17 @@ get collected and that the pointer gets updated when it is moved.
 
 The most common way of extending scheme in C++ is by adding
 primitives. To make a primitive you make a function that
-a) Returns a Cell
-b) Has 0 - 8 Cells as arguments
+* returns a Cell
+* has 0..8 Cells as arguments
 
 You can then make a binding for it in the default top-level
 environment with:
-
+```
 template <typename Function_Type>
 void Define_Primitive(const std::string& name,
                       Function_Type function, bool var_arg)
-
-Var_arg indicates whether the last argument matches to one argument or
+```
+`var_arg` indicates whether the last argument matches to one argument or
 the list of remaining arguments. The number of arguments is
 automatically deduced from the type of the function pointer.
 
