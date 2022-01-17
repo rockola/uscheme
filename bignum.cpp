@@ -44,7 +44,7 @@ public:
 private:
   void Clear_Temp_Buffers();
   
-  std::auto_ptr<digit> _buffer;
+  std::unique_ptr<digit> _buffer;
   std::vector<digit*> _temp_buffers;
   size_t _used, _desired_size, _current_size;
 };
@@ -73,7 +73,7 @@ digit* Array_Manager::Allocate(int size)
   else if (_used == 0){
     Clear_Temp_Buffers();
     if (_desired_size > _current_size){
-      _buffer = std::auto_ptr<digit>(new digit[_desired_size]);
+      _buffer = std::unique_ptr<digit>(new digit[_desired_size]);
       _current_size = _desired_size;
     }
   }
