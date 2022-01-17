@@ -1,8 +1,10 @@
-Unlikely Scheme Readme
-----------------------
-(for version .45, October 7th 2004)
+# Unlikely Scheme
 
-* Introduction
+by Marijn Haverbeke
+
+README (for version .45, October 7th 2004)
+
+## Introduction
 
 Unlikely Scheme is a small scheme interpreter. It is more or less R5RS
 compliant, although I am sure it deviates on some obscure points that
@@ -28,13 +30,13 @@ than spiffy implementations like mzscheme or scheme48. At any rate
 this is a work in progress, if you have any useful contributions I'd
 love to hear about them.
 
-* License
+## License
 
 This software is released under the zlib license. Basically you can
 use/copy/modify it however you like as long as you do not claim you
 wrote it and keep the license notice with it. See COPYING.
 
-* Installation
+## Installation
 
 I have (hopefully more or less up-to-date) MS Windows binaries hosted
 at the same place as the source. For unix systems compiling with the
@@ -55,7 +57,7 @@ favorite IDE should not be hard. Compiling all the cpp files together
 creates the stand alone interpreter, and for the library you leave out
 main.cpp.
 
-* Programming Interface
+## Programming Interface
 
 This is only a short summary because I am too lazy to write a good
 documentation for a beta whose interface will probably change anyway.
