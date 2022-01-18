@@ -168,9 +168,9 @@ void Mem_Manager::Collect_Garbage() {
                 }
                 // else if mask contains at least some 1's the fields that are
                 // indicated get pushed.
-                else if (mask != 0) {
-                    for (size_t i = 0; i < words && (mask >> i) != 0; ++i) {
-                        if (((mask >> i) & 1) != 0)
+                else if (mask != (std::byte) 0) {
+                    for (size_t i = 0; i < words && (mask >> i) != (std::byte) 0; ++i) {
+                        if (((mask >> i) & (std::byte) 1) != (std::byte) 0)
                             stack.push_back(info.data + i);
                     }
                 }
@@ -329,7 +329,7 @@ inline Cell Make_Bignum(digit *value, size_t size, bool negative) {
         --size;
     Cell retval =
         Allocate(sizeof(Bignum_Data) - sizeof(digit) + size * sizeof(digit),
-                 bignum_type, 0);
+                 bignum_type, (std::byte) 0);
     Bignum_Data &data = Extract<Bignum_Data>(retval);
     data.size = size;
     data.negative = negative;
@@ -598,7 +598,7 @@ void Write_Real(Cell cell, std::ostream &str, bool display) {
 }
 
 Cell Make_Real(double value) {
-    Cell retval = Allocate_Cell<double>(real_type, 0);
+    Cell retval = Allocate_Cell<double>(real_type, (std::byte) 0);
     Extract<double>(retval) = value;
     return retval;
 }
@@ -937,7 +937,7 @@ bool Is_Proper_List(Cell list) {
 // ,STRING
 
 Cell Make_String(size_t size, char fill = ' ') {
-    Cell new_string = Allocate(sizeof(size_t) + size, string_type, 0);
+    Cell new_string = Allocate(sizeof(size_t) + size, string_type, (std::byte) 0);
     String_Data &data = Extract<String_Data>(new_string);
     data.size = size;
     for (size_t i = 0; i != size; ++i)
@@ -947,7 +947,7 @@ Cell Make_String(size_t size, char fill = ' ') {
 
 Cell Make_String(const std::string &value) {
     // Allocates a cell of a size dependant on the string size.
-    Cell new_string = Allocate(sizeof(size_t) + value.size(), string_type, 0);
+    Cell new_string = Allocate(sizeof(size_t) + value.size(), string_type, (std::byte) 0);
     String_Data &data = Extract<String_Data>(new_string);
     data.size = value.size();
     std::copy(value.begin(), value.end(), data.data);
@@ -1045,7 +1045,7 @@ void Write_Outport(Cell cell, std::ostream &str, bool display) {
 
 // File ports keep track of their filename.
 Cell Make_Inport(const MCell &filename) {
-    Cell new_port = Allocate_Cell<Inport_Data>(inport_type, 1);
+    Cell new_port = Allocate_Cell<Inport_Data>(inport_type, (std::byte) 1);
     Inport_Data &data = Extract<Inport_Data>(new_port);
     std::ifstream *new_stream =
         new std::ifstream(String_Value(filename).c_str(), std::ios::binary);
@@ -1079,7 +1079,7 @@ void Reopen_Inport(Cell port) {
     }
 }
 Cell Make_Outport(const MCell &filename) {
-    Cell new_port = Allocate_Cell<Outport_Data>(outport_type, 1);
+    Cell new_port = Allocate_Cell<Outport_Data>(outport_type, (std::byte) 1);
     Outport_Data &data = Extract<Outport_Data>(new_port);
     std::ofstream *new_stream =
         new std::ofstream(String_Value(filename).c_str(), std::ios::binary);
@@ -1106,7 +1106,7 @@ void Reopen_Outport(Cell port) {
 // Ports based on existing streams. The filename field is #f for
 // these, closing or reopening them is a no-op.
 Cell Make_Inport(std::istream &stream) {
-    Cell new_port = Allocate_Cell<Inport_Data>(inport_type, 1);
+    Cell new_port = Allocate_Cell<Inport_Data>(inport_type, (std::byte) 1);
     Inport_Data &data = Extract<Inport_Data>(new_port);
     data.file_name = false_cell;
     data.stream = &stream;
@@ -1115,7 +1115,7 @@ Cell Make_Inport(std::istream &stream) {
     return new_port;
 }
 Cell Make_Outport(std::ostream &stream) {
-    Cell new_port = Allocate_Cell<Outport_Data>(outport_type, 1);
+    Cell new_port = Allocate_Cell<Outport_Data>(outport_type, (std::byte) 1);
     Outport_Data &data = Extract<Outport_Data>(new_port);
     data.file_name = false_cell;
     data.stream = &stream;
@@ -1207,7 +1207,7 @@ struct Closure_Data {
 
 Cell Make_Closure(const MCell &code, const MCell &environment, Cell num_args,
                   Cell name) {
-    Cell retval = Allocate_Cell<Closure_Data>(closure_type, 6);
+    Cell retval = Allocate_Cell<Closure_Data>(closure_type, (std::byte) 6);
     Closure_Data &data = Extract<Closure_Data>(retval);
     data.code = code;
     data.environment = environment;
@@ -1221,7 +1221,7 @@ Cell Make_Closure(const MCell &code, const MCell &environment, Cell num_args,
 // and a name.
 inline Cell Make_Closure(const MCell &unfinished_closure,
                          const MCell &environment) {
-    Cell retval = Allocate_Cell<Closure_Data>(closure_type, 6);
+    Cell retval = Allocate_Cell<Closure_Data>(closure_type, (std::byte) 6);
     Closure_Data &data = Extract<Closure_Data>(retval);
     data.code = Vector_Ref(unfinished_closure, 0);
     data.environment = environment;
@@ -1279,7 +1279,7 @@ struct Primitive_Data {
 #define WRITE_FUNCTION(n)                                                      \
     Cell Make_Primitive(Primitive_Function_##n function,                       \
                         const std::string &name, bool var_arg) {               \
-        Cell new_prim = Allocate_Cell<Primitive_Data>(primitive_type, 0);      \
+        Cell new_prim = Allocate_Cell<Primitive_Data>(primitive_type, (std::byte) 0); \
         Primitive_Data &data = Extract<Primitive_Data>(new_prim);              \
         data.function = reinterpret_cast<Primitive_Function_0>(function);      \
         data.num_args = n;                                                     \
@@ -2572,7 +2572,7 @@ Cell_Type Type_Manager::Make_Type(Write_Function write
     _destructors[_current] = destruct;
 #endif
 
-    S_ASSERT(_current != max_byte);
+    S_ASSERT(_current != static_cast<Cell_Type>(max_byte));
     Cell_Type c = _current;
     _current = static_cast<Cell_Type>(_current + 1);
     return c;

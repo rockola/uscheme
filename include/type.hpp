@@ -27,18 +27,19 @@
 #define TYPE_HPP
 
 #include <cstddef>
+#include <cstdint>
 
 // Some typedefs and constant to make some bit-twiddling operations
 // and typenames a little less ugly.
 
 namespace uls{
 
-typedef unsigned char byte;
-typedef long long int64;
-typedef unsigned long long uint64;
+typedef std::byte byte;
+typedef int64_t int64;
+typedef uint64_t uint64;
 const size_t byte_size = 8;
-const unsigned char max_byte = 0xFF;
-const unsigned short max_short = 0xFFFF;
+const std::byte max_byte = (std::byte) 0xFF;
+const std::uint16_t max_short = 0xFFFF;
 // TODO 64-bit fixnums
 const size_t max_int = 0xFFFFFFFF;
 

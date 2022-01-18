@@ -166,7 +166,7 @@ Cell_Type Make_Type(Write_Function write
 // 8 fields can be specified like this. The rest is assumed to be
 // non-cell data unless all bits were 1, in which case everything is
 // cell data.
-typedef byte Pointer_Mask;
+typedef std::byte Pointer_Mask;
 
 // This is the header for a memory block used by a cell. The top two
 // are only used by the memory manager, type can be looked at by all
