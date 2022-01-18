@@ -1,6 +1,8 @@
 # Unlikely Scheme
 
-by Marijn Haverbeke
+v0.49r1
+
+Forked from v0.49 by Marijn Haverbeke
 
 ## Build
 ```
