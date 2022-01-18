@@ -4016,7 +4016,7 @@ Cell Run_Code(Cell code, bool handle_errors)
 void Run_REPL(bool welcome_message)
 {
   if (welcome_message)
-    Outport_Stream(ip_->output) << "Welcome to Unlikely Scheme v" << VERSION << "\n";
+    Outport_Stream(ip_->output) << "Welcome to " << APP_NAME << " v" << VERSION << "\n";
 
   Eval_String("(run-repl (impl:current-env))", ip_->work_env, true);
 }
