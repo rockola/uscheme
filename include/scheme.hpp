@@ -23,8 +23,7 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef SCHEME_HPP
-#define SCHEME_HPP
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -35,12 +34,9 @@
 
 #include "type.hpp"
 #include "noncopyable.hpp"
-// Various error reporting things.
-#include "error.hpp"
-// Used to split input into tokens.
-#include "inputsplitter.hpp"
-// Associate strings with numbers.
-#include "symbol.hpp"
+#include "error.hpp"  // Various error reporting things.
+#include "inputsplitter.hpp"  // Used to split input into tokens.
+#include "symbol.hpp"  // Associate strings with numbers.
 
 namespace uls{
 
@@ -89,64 +85,56 @@ const Cell one_cell = (1 << 1) | int_pattern;
 
 // Some helper functions for encoding and extracting values with the
 // top 4 or 6 bits used as type identification.
-inline uintptr_t Extract_Fourbit(Cell cell){
-  return cell >> 4;
+inline uintptr_t Extract_Fourbit(Cell cell) { return cell >> 4; }
+inline Cell Encode_Fourbit(uintptr_t value, uintptr_t pattern) {
+    return (value << 4) | pattern;
 }
-inline Cell Encode_Fourbit(uintptr_t value, uintptr_t pattern){
-  return (value << 4) | pattern;
+inline bool Match_Fourbit(Cell cell, uintptr_t pattern) {
+    return (cell & 15) == pattern;
 }
-inline bool Match_Fourbit(Cell cell, uintptr_t pattern){
-  return (cell & 15) == pattern;
+inline uintptr_t Extract_Sixbit(Cell cell) { return cell >> 6; }
+inline Cell Encode_Sixbit(uintptr_t value, uintptr_t pattern) {
+    return (value << 6) | pattern;
 }
-inline uintptr_t Extract_Sixbit(Cell cell){
-  return cell >> 6;
-}
-inline Cell Encode_Sixbit(uintptr_t value, uintptr_t pattern){
-  return (value << 6) | pattern;
-}
-inline bool Match_Sixbit(Cell cell, uintptr_t pattern){
-  return (cell & 63) == pattern;
+inline bool Match_Sixbit(Cell cell, uintptr_t pattern) {
+    return (cell & 63) == pattern;
 }
 
 // ,SPECIALS
 
-inline bool Is_Special(Cell cell)
-{
-  return Match_Sixbit(cell, special_pattern);
+inline bool Is_Special(Cell cell) {
+    return Match_Sixbit(cell, special_pattern);
 }
 
 // Convenience function to make a scheme-boolean out of a c boolean.
-inline Cell Make_Bool(bool value)
-{
-  return value ? true_cell : false_cell;
-}
+inline Cell Make_Bool(bool value) { return value ? true_cell : false_cell; }
 
 // ,CELLTYPE
 
-// Cell types. A cell type is an 8 bit value identifying a compound
+// Cell types. A cell type is an enum value identifying a compound
 // cell type. Non-compound cell types are identified by their patterns
 // (see above). All user-defined types are compound. A cell type
 // always has a write function associated with it to convert cells of
 // that type to text.
-typedef byte Cell_Type;
-const Cell_Type
-  pair_type = 0,
-  vector_type = 1,
-  string_type = 2,
-  closure_type = 3,
-  primitive_type = 4,
-  continuation_type = 5,
-  inport_type = 6,
-  outport_type = 7,
-  rational_type = 8,
-  real_type = 9,
-  bignum_type = 10,
-  macro_type = 11,
-  simple_macro_type = 12,
-  renamed_symbol_type = 13,
-  namespace_type = 14,
-  moved_cell_type = 15, // used by GC
-  available_type = 16;
+enum Cell_Type {
+    pair_type = 0,
+    vector_type = 1,
+    string_type = 2,
+    closure_type = 3,
+    primitive_type = 4,
+    continuation_type = 5,
+    inport_type = 6,
+    outport_type = 7,
+    rational_type = 8,
+    real_type = 9,
+    bignum_type = 10,
+    macro_type = 11,
+    simple_macro_type = 12,
+    renamed_symbol_type = 13,
+    namespace_type = 14,
+    moved_cell_type = 15, // used by GC
+    available_type = 16
+};
 
 // New types can be created with the Make_Type function. It is up to
 // the user code to keep track of this value and pass it to
@@ -159,13 +147,14 @@ const Cell_Type
 #ifdef WITH_DESTRUCTORS
 typedef void (*Destroy_Function)(Cell cell);
 #endif
-typedef void (*Write_Function)(Cell cell, std::ostream& str, bool display);
+typedef void (*Write_Function)(Cell cell, std::ostream &str, bool display);
 Cell_Type Make_Type(Write_Function write
 #ifdef WITH_DESTRUCTORS
-                    , Destroy_Function destroy = NULL
+                    ,
+                    Destroy_Function destroy = NULL
 #endif
-                    );
-  
+);
+
 // ,CELLINFO
 
 // Used to tell the memory manager which part of a struct contains
@@ -183,207 +172,180 @@ typedef byte Pointer_Mask;
 // are only used by the memory manager, type can be looked at by all
 // code (use the Get_Type function), and data contains the data for
 // the cell.
-struct Cell_Info
-{
-  unsigned short size;
-  Pointer_Mask mask;
-  Cell_Type type;
-  Cell data[1];
+struct Cell_Info {
+    unsigned short size;
+    Pointer_Mask mask;
+    Cell_Type type;
+    Cell data[1];
 };
 
-inline bool Is_Compound(Cell cell)
-{
-  return (reinterpret_cast<uintptr_t&>(cell) & 3) == 0;
+inline bool Is_Compound(Cell cell) {
+    return (reinterpret_cast<uintptr_t &>(cell) & 3) == 0;
 }
 
-inline Cell_Info& Compound_Info(Cell cell)
-{
-  S_ASSERT(Is_Compound(cell));
-  return *reinterpret_cast<Cell_Info*>(cell);
+inline Cell_Info &Compound_Info(Cell cell) {
+    S_ASSERT(Is_Compound(cell));
+    return *reinterpret_cast<Cell_Info *>(cell);
 }
 
 // Get a reference to the guts of a compound cell represented as a
 // certain type. Make sure you are actually using the right type with
 // the right kind of cell.
-template<class Data>
-inline Data& Extract(const Cell cell)
-{
-  return *reinterpret_cast<Data*>(Compound_Info(cell).data);
+template <class Data> inline Data &Extract(const Cell cell) {
+    return *reinterpret_cast<Data *>(Compound_Info(cell).data);
 }
 
 // Get the type of a compound cell. Does not work on non-compound
 // cells!
-inline Cell_Type Get_Type(Cell cell)
-{
-  return Compound_Info(cell).type;
-}
+inline Cell_Type Get_Type(Cell cell) { return Compound_Info(cell).type; }
 
 // ,MEMMANAGER
 
 // The memory manager. Every interpreter has one of these. They are
 // used to allocate cells and they take care of the garbage
 // collection.
-class Mem_Manager: public noncopyable
-{
-public:
-  Mem_Manager(size_t block_size = 500000);
-  ~Mem_Manager();
+class Mem_Manager : public noncopyable {
+  public:
+    Mem_Manager(size_t block_size = 500000);
+    ~Mem_Manager();
 
-  // Allocate a cell, you might want to consider using the free
-  // function Allocate_Cell if you know exactly how big the cell has
-  // to be. This can trigger garbage collection.
-  Cell Allocate(size_t size, Cell_Type type, Pointer_Mask mask = max_byte);
+    // Allocate a cell, you might want to consider using the free
+    // function Allocate_Cell if you know exactly how big the cell has
+    // to be. This can trigger garbage collection.
+    Cell Allocate(size_t size, Cell_Type type, Pointer_Mask mask = max_byte);
 
-  // Discard all cells that are not pointed to by the content of
-  // MCells and MStacks
-  void Collect_Garbage();
+    // Discard all cells that are not pointed to by the content of
+    // MCells and MStacks
+    void Collect_Garbage();
 
-  // Just for debugging, checks whether a cell was missed in the last collection
-  bool Is_Valid(Cell cell)
-  {
-    return !Is_Compound(cell) || Is_In_Block(cell, _live_block);
-  }
-  
-  // These are used by MCell and MStack to protect their contents from
-  // being collected. You are advised to use those classes instead of
-  // using these functions directly.
-  void Push_Marked(Cell* cell)
-  {
-    _marked.push_back(cell);
-  }
-  void Pop_Marked(Cell* cell)
-  {
-    if(_marked.back() == cell)
-      _marked.pop_back();
-    else
-      Smart_Pop_Marked(cell);
-  }
-  void Push_Stack(std::vector<Cell>& stack)
-  {
-    _stacks.push_back(&stack);
-  }
-  void Pop_Stack()
-  {
-    _stacks.pop_back();
-  }
-  
-private:
-  void Move_Cell(Cell* cell);
-  bool Is_In_Block(Cell cell, size_t* block) const;
-  void Smart_Pop_Marked(Cell* cell);
+    // Just for debugging, checks whether a cell was missed in the last
+    // collection
+    bool Is_Valid(Cell cell) {
+        return !Is_Compound(cell) || Is_In_Block(cell, _live_block);
+    }
+
+    // These are used by MCell and MStack to protect their contents from
+    // being collected. You are advised to use those classes instead of
+    // using these functions directly.
+    void Push_Marked(Cell *cell) { _marked.push_back(cell); }
+    void Pop_Marked(Cell *cell) {
+        if (_marked.back() == cell)
+            _marked.pop_back();
+        else
+            Smart_Pop_Marked(cell);
+    }
+    void Push_Stack(std::vector<Cell> &stack) { _stacks.push_back(&stack); }
+    void Pop_Stack() { _stacks.pop_back(); }
+
+  private:
+    void Move_Cell(Cell *cell);
+    bool Is_In_Block(Cell cell, size_t *block) const;
+    void Smart_Pop_Marked(Cell *cell);
 #ifdef WITH_DESTRUCTORS
-  friend class Interpreter;
-  void Call_Destructors(size_t old_block_position);
-  void Call_All_Destructors();
+    friend class Interpreter;
+    void Call_Destructors(size_t old_block_position);
+    void Call_All_Destructors();
 #endif
 
-  const size_t _block_size;
-  size_t _block_position, _cell_header_size;
-  size_t* _live_block, * _dead_block;
+    const size_t _block_size;
+    size_t _block_position, _cell_header_size;
+    size_t *_live_block, *_dead_block;
 
-  std::vector<Cell*> _marked;
-  std::vector<std::vector<Cell>*> _stacks;
+    std::vector<Cell *> _marked;
+    std::vector<std::vector<Cell> *> _stacks;
 };
 
 // Points to the memory manager if one is alive. You are encouraged to
 // just stay away from this pointer, since the top-level Allocate
 // functions supply a perfectly good way to allocate stuff.
-extern Mem_Manager* mp_;
+extern Mem_Manager *mp_;
 
 // MCell is used to contain one cell (objects of this class can be
 // implicitly converted from and to cells) and protect it from being
 // garbage collected.
-class MCell
-{
-public:
-  MCell(Cell cell = null_cell)
-    : _cell(cell)
-  {
-    mp_->Push_Marked(&_cell);
-  }
-  MCell(const MCell& other)
-    : _cell(other._cell)
-  {
-    mp_->Push_Marked(&_cell);
-  }
-  inline ~MCell()
-  {
-    mp_->Pop_Marked(&_cell);
-  }
+class MCell {
+  public:
+    MCell(Cell cell = null_cell) : _cell(cell) { mp_->Push_Marked(&_cell); }
+    MCell(const MCell &other) : _cell(other._cell) { mp_->Push_Marked(&_cell); }
+    inline ~MCell() { mp_->Pop_Marked(&_cell); }
 
-  operator Cell&() {return _cell;}
-  operator Cell() const{return _cell;}
-  void operator=(Cell cell){_cell = cell;}
-  void operator=(const MCell& mcell){_cell = mcell._cell;}
-  
-private:
-  Cell _cell;
+    operator Cell &() { return _cell; }
+    operator Cell() const { return _cell; }
+    void operator=(Cell cell) { _cell = cell; }
+    void operator=(const MCell &mcell) { _cell = mcell._cell; }
+
+  private:
+    Cell _cell;
 };
 
 // MStack is like MCell but instead it protects a whole stack of
 // cells. Has a std::vector-like interface. You must not allocate
 // these as function statics or on the heap, they rely on being
 // destructed in the same order they were created.
-class MStack
-{
-public:
-  MStack(){mp_->Push_Stack(_cells);}
-  explicit MStack(size_t size) : _cells(size, null_cell){mp_->Push_Stack(_cells);}
-  ~MStack(){mp_->Pop_Stack();}
-  
-  Cell& operator[](size_t n){return _cells[n];}
-  Cell operator[](size_t n) const{return _cells[n];}
-  void Push(Cell cell){_cells.push_back(cell);}
-  Cell Pop(){Cell temp = _cells.back(); _cells.pop_back(); return temp;}
-  bool Empty() const{return _cells.empty();}
-  size_t Size() const{return _cells.size();}
-  Cell& Back(){return _cells.back();}
-  void Clear(){_cells.clear();}
-  
-private:
-  std::vector<Cell> _cells;
+class MStack {
+  public:
+    MStack() { mp_->Push_Stack(_cells); }
+    explicit MStack(size_t size) : _cells(size, null_cell) {
+        mp_->Push_Stack(_cells);
+    }
+    ~MStack() { mp_->Pop_Stack(); }
+
+    Cell &operator[](size_t n) { return _cells[n]; }
+    Cell operator[](size_t n) const { return _cells[n]; }
+    void Push(Cell cell) { _cells.push_back(cell); }
+    Cell Pop() {
+        Cell temp = _cells.back();
+        _cells.pop_back();
+        return temp;
+    }
+    bool Empty() const { return _cells.empty(); }
+    size_t Size() const { return _cells.size(); }
+    Cell &Back() { return _cells.back(); }
+    void Clear() { _cells.clear(); }
+
+  private:
+    std::vector<Cell> _cells;
 };
 
 // ,TYPE MANAGER
 
 // Associates write functions with cell types. Just use Make_Type and
 // ignore this class.
-class Type_Manager: public noncopyable
-{
-public:
-  Type_Manager();
-  Cell_Type Make_Type(Write_Function write
+class Type_Manager : public noncopyable {
+  public:
+    Type_Manager();
+    Cell_Type Make_Type(Write_Function write
 #ifdef WITH_DESTRUCTORS
-                    , Destroy_Function destroy
+                        ,
+                        Destroy_Function destroy
 #endif
-                      );
-  Write_Function Get_Function(Cell_Type type){
-    S_ASSERT(type < _functions.size());
-    S_ASSERT(_functions[type] != NULL);
-    return _functions[type];
-  }
+    );
+    Write_Function Get_Function(Cell_Type type) {
+        S_ASSERT(type < _functions.size());
+        S_ASSERT(_functions[type] != NULL);
+        return _functions[type];
+    }
 #ifdef WITH_DESTRUCTORS
-  Destroy_Function Get_Destructor(Cell_Type type){
-    S_ASSERT(type < _destructors.size());
-    return _destructors[type];
-  }
+    Destroy_Function Get_Destructor(Cell_Type type) {
+        S_ASSERT(type < _destructors.size());
+        return _destructors[type];
+    }
 #endif
 
-private:
-  std::vector<Write_Function> _functions;
+  private:
+    std::vector<Write_Function> _functions;
 #ifdef WITH_DESTRUCTORS
-  std::vector<Destroy_Function> _destructors;
-#endif  
-  Cell_Type _current;
+    std::vector<Destroy_Function> _destructors;
+#endif
+    Cell_Type _current;
 };
-
 
 // ,INTERPRETER
 
 // This is what you create an instance of to start working with
 // scheme. Everything is public, and the only member function is the
 // constructor.
-// 
+//
 // The argument to the constructor gives the amount of kilobytes a
 // memory block must contain. The memory allocated by the mem manager
 // is twice this, because of the garbage collection method used.
@@ -392,33 +354,31 @@ private:
 // You can call functions on the mem_manager and type_manager if you
 // must, change the standard input and output, messing with the
 // environments is probably a bad idea.
-struct Interpreter
-{
-  explicit Interpreter(size_t memory = 2000);
-  ~Interpreter();
-  
-  Type_Manager type_manager;
-  Mem_Manager mem_manager;
+struct Interpreter {
+    explicit Interpreter(size_t memory = 2000);
+    ~Interpreter();
 
-  MCell null_env, report_env, work_env;
-  MCell input, output;
+    Type_Manager type_manager;
+    Mem_Manager mem_manager;
+
+    MCell null_env, report_env, work_env;
+    MCell input, output;
 };
 
 // Pointer to a live Interpreter if one exists. Don't touch.
-extern Interpreter* ip_;
+extern Interpreter *ip_;
 
 // Convenient ways of allocating a cell. Use the template argument of
 // Allocate_Cell to specify what kind of data you want to store in the
 // cell (and then get access to that with Extract<Data> after it has
 // been allocated).
-inline Cell Allocate(size_t size, Cell_Type type, Pointer_Mask mask = max_byte)
-{
-  return mp_->Allocate(size, type, mask);
+inline Cell Allocate(size_t size, Cell_Type type,
+                     Pointer_Mask mask = max_byte) {
+    return mp_->Allocate(size, type, mask);
 }
 template <class Data>
-inline Cell Allocate_Cell(Cell_Type type, Pointer_Mask mask = max_byte)
-{
-  return Allocate(sizeof(Data), type, mask);
+inline Cell Allocate_Cell(Cell_Type type, Pointer_Mask mask = max_byte) {
+    return Allocate(sizeof(Data), type, mask);
 }
 
 // ,FIXNUM
@@ -426,24 +386,19 @@ inline Cell Allocate_Cell(Cell_Type type, Pointer_Mask mask = max_byte)
 // Fixnums range from -max_fixnum to +max_fixnum
 const uintptr_t max_fixnum = (max_int >> 2);
 
-inline bool Is_Fixnum(Cell cell)
-{
-  return (cell & 1) == int_pattern;
+inline bool Is_Fixnum(Cell cell) { return (cell & 1) == int_pattern; }
+inline Cell Make_Fixnum(int value) {
+    S_ASSERT(std::abs(value) < max_fixnum);
+    return (value << 1) | int_pattern;
 }
-inline Cell Make_Fixnum(int value)
-{
-  S_ASSERT(std::abs(value) < max_fixnum);
-  return (value << 1) | int_pattern;
-}
-inline int Fixnum_Value(Cell cell)
-{
-  S_ASSERT(Is_Fixnum(cell));
-  uintptr_t bits = cell >> 1;
-  // This is needed to restore the sign, it basically takes the
-  // almost-most-significant bit and copies it to the most significant
-  // bit (which got trampled by the shifting)
-  bits |= ((bits & (1 << (sizeof(int) * byte_size - 2))) << 1);
-  return reinterpret_cast<int&>(bits);
+inline int Fixnum_Value(Cell cell) {
+    S_ASSERT(Is_Fixnum(cell));
+    uintptr_t bits = cell >> 1;
+    // This is needed to restore the sign, it basically takes the
+    // almost-most-significant bit and copies it to the most significant
+    // bit (which got trampled by the shifting)
+    bits |= ((bits & (1 << (sizeof(int) * byte_size - 2))) << 1);
+    return reinterpret_cast<int &>(bits);
 }
 
 // ,BIGNUM
@@ -453,25 +408,20 @@ inline int Fixnum_Value(Cell cell)
 // - a series of 32-bit values that make up the digits of the number in
 //   radix 2^32
 
-inline bool Is_Bignum(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == bignum_type;
+inline bool Is_Bignum(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == bignum_type;
 }
 Cell Make_Bignum(int64 value);
 
 // ,INTEGER
 
-inline bool Is_Integer(Cell cell)
-{
-  return Is_Fixnum(cell) || Is_Bignum(cell);
-}
-inline Cell Make_Integer(int64 value)
-{
-  uint64 abs_value = (value < 0) ? -value : value;
-  if (abs_value >= max_fixnum)
-    return Make_Bignum(value);
-  else
-    return Make_Fixnum(value);
+inline bool Is_Integer(Cell cell) { return Is_Fixnum(cell) || Is_Bignum(cell); }
+inline Cell Make_Integer(int64 value) {
+    uint64 abs_value = (value < 0) ? -value : value;
+    if (abs_value >= max_fixnum)
+        return Make_Bignum(value);
+    else
+        return Make_Fixnum(value);
 }
 
 // Bignums are tricky to work with, here are some basic numeric
@@ -489,49 +439,36 @@ Cell Integer_Modulo(Cell one, Cell two);
 // Rational number are implemented as two integer (fixnum or bignum)
 // values. They are always simplified on creation.
 
-struct Rational_Data
-{
-  Cell numerator, denominator;
+struct Rational_Data {
+    Cell numerator, denominator;
 };
 
-inline bool Is_Rational(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == rational_type;
+inline bool Is_Rational(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == rational_type;
 }
 Cell Make_Simplified_Rational(Cell numerator, Cell denominator);
 
-inline Cell& Rational_Numerator(const Cell cell)
-{
-  return Extract<Rational_Data>(cell).numerator;
+inline Cell &Rational_Numerator(const Cell cell) {
+    return Extract<Rational_Data>(cell).numerator;
 }
-inline Cell& Rational_Denominator(const Cell cell)
-{
-  return Extract<Rational_Data>(cell).denominator;
+inline Cell &Rational_Denominator(const Cell cell) {
+    return Extract<Rational_Data>(cell).denominator;
 }
 
 // ,REAL
 // Reals are C++ doubles wrapped up in a cell
 
-inline bool Is_Real(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == real_type;
+inline bool Is_Real(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == real_type;
 }
 Cell Make_Real(double value);
-inline double Real_Value(Cell cell)
-{
-  return Extract<double>(cell);
-}
+inline double Real_Value(Cell cell) { return Extract<double>(cell); }
 
 // ,NUMBER
 
 // The Num_Type system is used to conveniently 'promote' numbers to
 // other number types.
-enum Num_Type {
-  n_fixnum = 0,
-  n_bignum = 1,
-  n_rational = 2,
-  n_real = 3
-};
+enum Num_Type { n_fixnum = 0, n_bignum = 1, n_rational = 2, n_real = 3 };
 
 Num_Type Number_Type(Cell cell);
 // Be careful with Promote_Number, promoting fixnums leads to bignums
@@ -540,9 +477,8 @@ Num_Type Number_Type(Cell cell);
 // such objects.
 Cell Promote_Number(Cell num, Num_Type type);
 
-inline bool Is_Number(Cell cell)
-{
-  return Is_Integer(cell) || Is_Real(cell) || Is_Rational(cell);
+inline bool Is_Number(Cell cell) {
+    return Is_Integer(cell) || Is_Real(cell) || Is_Rational(cell);
 }
 
 // Get the double value of any type of number, can be convenient with
@@ -559,133 +495,78 @@ Cell Number_Divide(Cell one, Cell two);
 // Symbol cells, see symbol.hpp and symbol.cpp for the implementation
 // of the symbol table.
 
-inline bool Is_Symbol(Cell cell)
-{
-  return Match_Fourbit(cell, symbol_pattern);
+inline bool Is_Symbol(Cell cell) { return Match_Fourbit(cell, symbol_pattern); }
+inline Cell Make_Symbol(Symbol symbol) {
+    return Encode_Fourbit(symbol, symbol_pattern);
 }
-inline Cell Make_Symbol(Symbol symbol)
-{
-  return Encode_Fourbit(symbol, symbol_pattern);
+inline Cell Make_Symbol(const std::string &name) {
+    return Make_Symbol(Get_Symbol(name));
 }
-inline Cell Make_Symbol(const std::string& name)
-{
-  return Make_Symbol(Get_Symbol(name));
-}
-inline Symbol Symbol_Value(Cell cell)
-{
-  return Extract_Fourbit(cell);
-}
-inline const std::string& Symbol_Name(Cell cell)
-{
-  return Get_Symbol_Name(Symbol_Value(cell));
+inline Symbol Symbol_Value(Cell cell) { return Extract_Fourbit(cell); }
+inline const std::string &Symbol_Name(Cell cell) {
+    return Get_Symbol_Name(Symbol_Value(cell));
 }
 
 // ,CHARACTER
 
-inline bool Is_Character(Cell cell)
-{
-  return Match_Sixbit(cell, char_pattern);
-}
-inline Cell Make_Character(int c)
-{
-  return Encode_Sixbit(c, char_pattern);
-}
-inline int Character_Value(Cell cell)
-{
-  return Extract_Sixbit(cell);
-}
+inline bool Is_Character(Cell cell) { return Match_Sixbit(cell, char_pattern); }
+inline Cell Make_Character(int c) { return Encode_Sixbit(c, char_pattern); }
+inline int Character_Value(Cell cell) { return Extract_Sixbit(cell); }
 
 // ,PAIR
 
-struct Pair
-{
-  Cell car, cdr;
+struct Pair {
+    Cell car, cdr;
 };
 
-inline bool Is_Pair(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == pair_type;
+inline bool Is_Pair(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == pair_type;
 }
 
 // Car and Cdr are used both for getting and setting values.
-inline Cell& Car(const Cell cell)
-{
-  S_ASSERT(Is_Pair(cell));
-  return Extract<Pair>(cell).car;
+inline Cell &Car(const Cell cell) {
+    S_ASSERT(Is_Pair(cell));
+    return Extract<Pair>(cell).car;
 }
-inline Cell& Cdr(const Cell cell)
-{
-  S_ASSERT(Is_Pair(cell));
-  return Extract<Pair>(cell).cdr;
+inline Cell &Cdr(const Cell cell) {
+    S_ASSERT(Is_Pair(cell));
+    return Extract<Pair>(cell).cdr;
 }
 
 // A number of cxr variants.
-inline Cell& Caar(const Cell cell)
-{
-  return Car(Car(cell));
-}
-inline Cell& Cdar(const Cell cell)
-{
-  return Cdr(Car(cell));
-}
-inline Cell& Cadr(const Cell cell)
-{
-  return Car(Cdr(cell));
-}
-inline Cell& Cddr(const Cell cell)
-{
-  return Cdr(Cdr(cell));
-}
-inline Cell& Caddr(const Cell cell)
-{
-  return Car(Cdr(Cdr(cell)));
-}
-inline Cell& Cdaar(const Cell cell)
-{
-  return Cdr(Car(Car(cell)));
-}
-inline Cell& Cadar(const Cell cell)
-{
-  return Car(Cdr(Car(cell)));
-}
-inline Cell& Cddar(const Cell cell)
-{
-  return Cdr(Cdr(Car(cell)));
-}
-inline Cell& Caadr(const Cell cell)
-{
-  return Car(Car(Cdr(cell)));
-}
-inline Cell& Caaar(const Cell cell)
-{
-  return Car(Car(Car(cell)));
-}
+inline Cell &Caar(const Cell cell) { return Car(Car(cell)); }
+inline Cell &Cdar(const Cell cell) { return Cdr(Car(cell)); }
+inline Cell &Cadr(const Cell cell) { return Car(Cdr(cell)); }
+inline Cell &Cddr(const Cell cell) { return Cdr(Cdr(cell)); }
+inline Cell &Caddr(const Cell cell) { return Car(Cdr(Cdr(cell))); }
+inline Cell &Cdaar(const Cell cell) { return Cdr(Car(Car(cell))); }
+inline Cell &Cadar(const Cell cell) { return Car(Cdr(Car(cell))); }
+inline Cell &Cddar(const Cell cell) { return Cdr(Cdr(Car(cell))); }
+inline Cell &Caadr(const Cell cell) { return Car(Car(Cdr(cell))); }
+inline Cell &Caaar(const Cell cell) { return Car(Car(Car(cell))); }
 
-inline Cell Cons(const MCell& car, const MCell& cdr)
-{
-  Cell retval = Allocate_Cell<Pair>(pair_type);
-  Car(retval) = car;
-  Cdr(retval) = cdr;
-  return retval;
+inline Cell Cons(const MCell &car, const MCell &cdr) {
+    Cell retval = Allocate_Cell<Pair>(pair_type);
+    Car(retval) = car;
+    Cdr(retval) = cdr;
+    return retval;
 }
 // Only use this when car and cdr are NOT compounds
-inline Cell XCons(Cell car, Cell cdr)
-{
-  Cell retval = Allocate_Cell<Pair>(pair_type);
-  Car(retval) = car;
-  Cdr(retval) = cdr;
-  return retval;
+inline Cell XCons(Cell car, Cell cdr) {
+    Cell retval = Allocate_Cell<Pair>(pair_type);
+    Car(retval) = car;
+    Cdr(retval) = cdr;
+    return retval;
 }
 // Conses null onto a cell
-inline Cell Cons_Null(const MCell& car)
-{
-  Cell retval = Allocate_Cell<Pair>(pair_type);
-  Car(retval) = car;
-  Cdr(retval) = null_cell;
-  return retval;
+inline Cell Cons_Null(const MCell &car) {
+    Cell retval = Allocate_Cell<Pair>(pair_type);
+    Car(retval) = car;
+    Cdr(retval) = null_cell;
+    return retval;
 }
-    
-size_t List_Length(Cell list, const char* error = "improper list");
+
+size_t List_Length(Cell list, const char *error = "improper list");
 bool Is_Proper_List(Cell list);
 
 bool Equal(Cell one, Cell two);
@@ -693,143 +574,121 @@ bool Member(Cell value, Cell list);
 Cell Assoc(Cell needle, Cell list);
 
 // Easy way of building a list front to end.
-class List_Builder
-{
-public:
-  void Add_Element(const MCell& cell)
-  {
-    if (_start == null_cell){
-      _start = Cons(cell, _start);
-      _tail = _start;
+class List_Builder {
+  public:
+    void Add_Element(const MCell &cell) {
+        if (_start == null_cell) {
+            _start = Cons(cell, _start);
+            _tail = _start;
+        } else {
+            S_ASSERT(_tail != null_cell);
+            Cdr(_tail) = Cons_Null(cell);
+            _tail = Cdr(_tail);
+        }
     }
-    else{
-      S_ASSERT(_tail != null_cell);
-      Cdr(_tail) = Cons_Null(cell);
-      _tail = Cdr(_tail);
+    void Add_End(Cell cell) {
+        if (_start == null_cell) {
+            _start = cell;
+        } else {
+            S_ASSERT(_tail != null_cell);
+            Cdr(_tail) = cell;
+        }
+        _tail = null_cell;
     }
-  }
-  void Add_End(Cell cell)
-  {
-    if (_start == null_cell){
-      _start = cell;
-    }
-    else{
-      S_ASSERT(_tail != null_cell);
-      Cdr(_tail) = cell;
-    }
-    _tail = null_cell;
-  }
-  const MCell& List()
-  {
-    return _start;
-  }
+    const MCell &List() { return _start; }
 
-private:
-  MCell _start, _tail;
+  private:
+    MCell _start, _tail;
 };
 
 // ,STRING
 
-inline bool Is_String(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == string_type;
+inline bool Is_String(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == string_type;
 }
-Cell Make_String(const std::string& value);
+Cell Make_String(const std::string &value);
 std::string String_Value(Cell cell);
 
-struct String_Data
-{
-  size_t size;
-  char data[1];
+struct String_Data {
+    size_t size;
+    char data[1];
 };
 
-inline size_t String_Size(Cell cell)
-{
-  S_ASSERT(Is_String(cell));
-  return Extract<String_Data>(cell).size;
+inline size_t String_Size(Cell cell) {
+    S_ASSERT(Is_String(cell));
+    return Extract<String_Data>(cell).size;
 }
-inline char& String_Ref(Cell cell, size_t n)
-{
-  S_ASSERT(Is_String(cell));
-  S_ASSERT(n < String_Size(cell));
-  return Extract<String_Data>(cell).data[n];
+inline char &String_Ref(Cell cell, size_t n) {
+    S_ASSERT(Is_String(cell));
+    S_ASSERT(n < String_Size(cell));
+    return Extract<String_Data>(cell).data[n];
 }
 
 // ,VECTOR
 
-inline bool Is_Vector(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == vector_type;
+inline bool Is_Vector(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == vector_type;
 }
 
 // Some different ways of constructing vectors
 Cell Make_Vector(size_t size, Cell fill = null_cell);
-Cell Make_Vector(const MStack& stack);
+Cell Make_Vector(const MStack &stack);
 Cell Make_Vector_From_List(Cell list);
 
-struct Vector_Data
-{
-  Cell size;
-  Cell data[1];
+struct Vector_Data {
+    Cell size;
+    Cell data[1];
 };
 
-inline size_t Vector_Size(Cell cell)
-{
-  S_ASSERT(Is_Vector(cell));
-  return Fixnum_Value(Extract<Vector_Data>(cell).size);
+inline size_t Vector_Size(Cell cell) {
+    S_ASSERT(Is_Vector(cell));
+    return Fixnum_Value(Extract<Vector_Data>(cell).size);
 }
-inline Cell& Vector_Ref(Cell cell, size_t n)
-{
-  S_ASSERT(Is_Vector(cell));
-  return Extract<Vector_Data>(cell).data[n];
+inline Cell &Vector_Ref(Cell cell, size_t n) {
+    S_ASSERT(Is_Vector(cell));
+    return Extract<Vector_Data>(cell).data[n];
 }
 
 // ,PORT
 
-inline bool Is_Inport(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == inport_type;
+inline bool Is_Inport(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == inport_type;
 }
-inline bool Is_Outport(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == outport_type;
+inline bool Is_Outport(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == outport_type;
 }
 
 // Ports made with a filename have to be closed before they are
 // collected or they will leak memory.
-Cell Make_Inport(const MCell& filename);
-Cell Make_Outport(const MCell& filename);
-Cell Make_Inport(std::istream& stream);
-Cell Make_Outport(std::ostream& stream);
+Cell Make_Inport(const MCell &filename);
+Cell Make_Outport(const MCell &filename);
+Cell Make_Inport(std::istream &stream);
+Cell Make_Outport(std::ostream &stream);
 
 Cell Inport_Read_Char(Cell port);
 Cell Inport_Peek_Char(Cell port);
 
-struct Inport_Data
-{
-  Cell file_name;
-  std::istream* stream;
-  size_t position, line;
+struct Inport_Data {
+    Cell file_name;
+    std::istream *stream;
+    size_t position, line;
 };
-struct Outport_Data
-{
-  Cell file_name;
-  std::ostream* stream;
+struct Outport_Data {
+    Cell file_name;
+    std::ostream *stream;
 };
 
-std::istream& Inport_Stream(Cell port);
-std::ostream& Outport_Stream(Cell cell);
+std::istream &Inport_Stream(Cell port);
+std::ostream &Outport_Stream(Cell cell);
 size_t Inport_Line(Cell port);
 
-inline bool Inport_Is_Open(Cell cell)
-{
-  S_ASSERT(Is_Inport(cell));
-  return Extract<Inport_Data>(cell).stream != NULL;
+inline bool Inport_Is_Open(Cell cell) {
+    S_ASSERT(Is_Inport(cell));
+    return Extract<Inport_Data>(cell).stream != NULL;
 }
-inline bool Outport_Is_Open(Cell cell)
-{
-  S_ASSERT(Is_Outport(cell));
-  return Extract<Outport_Data>(cell).stream != NULL;
+inline bool Outport_Is_Open(Cell cell) {
+    S_ASSERT(Is_Outport(cell));
+    return Extract<Outport_Data>(cell).stream != NULL;
 }
 
 void Close_Inport(Cell cell);
@@ -837,9 +696,8 @@ void Close_Outport(Cell cell);
 
 // ,NAMESPACE
 
-inline bool Is_Namespace(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == namespace_type;
+inline bool Is_Namespace(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == namespace_type;
 }
 
 // ,CLOSURE
@@ -848,9 +706,8 @@ inline bool Is_Namespace(Cell cell)
 // the environment in which they were created and optionally name.
 // This is not exposed in this header though, client code shouldn't
 // need to manipulate closures directly.
-inline bool Is_Closure(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == closure_type;
+inline bool Is_Closure(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == closure_type;
 }
 Cell Closure_Name(Cell cell);
 
@@ -863,50 +720,59 @@ Cell Closure_Name(Cell cell);
 // primitive with the correct number of arguments based on the type of
 // function you pass it. If var_arg is true the last argument will
 // behave like z in (lambda (x y . z) ....)
-typedef Cell (*Primitive_Function_0) ();
-typedef Cell (*Primitive_Function_1) (Cell one);
-typedef Cell (*Primitive_Function_2) (Cell one, Cell two);
-typedef Cell (*Primitive_Function_3) (Cell one, Cell two, Cell three);
-typedef Cell (*Primitive_Function_4) (Cell one, Cell two, Cell three, Cell four);
-typedef Cell (*Primitive_Function_5) (Cell one, Cell two, Cell three, Cell four, Cell five);
-typedef Cell (*Primitive_Function_6) (Cell one, Cell two, Cell three, Cell four, Cell five, Cell six);
-typedef Cell (*Primitive_Function_7) (Cell one, Cell two, Cell three, Cell four, Cell five, Cell six, Cell seven);
-typedef Cell (*Primitive_Function_8) (Cell one, Cell two, Cell three, Cell four, Cell five, Cell six, Cell seven, Cell eight);
-Cell Make_Primitive(Primitive_Function_0 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_1 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_2 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_3 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_4 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_5 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_6 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_7 function, const std::string& name, bool var_arg = false);
-Cell Make_Primitive(Primitive_Function_8 function, const std::string& name, bool var_arg = false);
+typedef Cell (*Primitive_Function_0)();
+typedef Cell (*Primitive_Function_1)(Cell one);
+typedef Cell (*Primitive_Function_2)(Cell one, Cell two);
+typedef Cell (*Primitive_Function_3)(Cell one, Cell two, Cell three);
+typedef Cell (*Primitive_Function_4)(Cell one, Cell two, Cell three, Cell four);
+typedef Cell (*Primitive_Function_5)(Cell one, Cell two, Cell three, Cell four,
+                                     Cell five);
+typedef Cell (*Primitive_Function_6)(Cell one, Cell two, Cell three, Cell four,
+                                     Cell five, Cell six);
+typedef Cell (*Primitive_Function_7)(Cell one, Cell two, Cell three, Cell four,
+                                     Cell five, Cell six, Cell seven);
+typedef Cell (*Primitive_Function_8)(Cell one, Cell two, Cell three, Cell four,
+                                     Cell five, Cell six, Cell seven,
+                                     Cell eight);
+Cell Make_Primitive(Primitive_Function_0 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_1 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_2 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_3 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_4 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_5 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_6 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_7 function, const std::string &name,
+                    bool var_arg = false);
+Cell Make_Primitive(Primitive_Function_8 function, const std::string &name,
+                    bool var_arg = false);
 
-inline bool Is_Primitive(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == primitive_type;
+inline bool Is_Primitive(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == primitive_type;
 }
 
 // ,SYNTAX
 
 // 'Special form' means primitive syntax here - stuff like if, lambda,
 // quote are special forms.
-inline bool Is_Special_Form(Cell cell)
-{
-  return Match_Sixbit(cell, form_pattern);
+inline bool Is_Special_Form(Cell cell) {
+    return Match_Sixbit(cell, form_pattern);
 }
 // Stuff defined by syntax-rules expressions are macros
-inline bool Is_Macro(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == macro_type;
+inline bool Is_Macro(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == macro_type;
 }
-inline bool Is_Simple_Macro(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == simple_macro_type;
+inline bool Is_Simple_Macro(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == simple_macro_type;
 }
-inline bool Is_Syntax(Cell cell)
-{
-  return Is_Special_Form(cell) || Is_Macro(cell) || Is_Simple_Macro(cell);
+inline bool Is_Syntax(Cell cell) {
+    return Is_Special_Form(cell) || Is_Macro(cell) || Is_Simple_Macro(cell);
 }
 
 // ,CONTINUATION
@@ -915,20 +781,20 @@ inline bool Is_Syntax(Cell cell)
 // call/cc returns are actually closures with a continuation inside.
 // The only way to directly work with these is through the
 // #%current_continuation and #%set_continuation instructions.
-inline bool Is_Continuation(Cell cell)
-{
-  return Is_Compound(cell) && Get_Type(cell) == continuation_type;
+inline bool Is_Continuation(Cell cell) {
+    return Is_Compound(cell) && Get_Type(cell) == continuation_type;
 }
 
 // ,INTERFACE
 
 // Define a top-level symbol to have a certain value.
-void Define_Symbol(const MCell& name_space, const std::string& name, const MCell& value);
+void Define_Symbol(const MCell &name_space, const std::string &name,
+                   const MCell &value);
 // Convenience function for defining primitives.
 template <typename Function_Type>
-inline void Define_Primitive(const std::string& name, Function_Type function, bool var_arg = false)
-{
-  Define_Symbol(ip_->work_env, name, Make_Primitive(function, name, var_arg));
+inline void Define_Primitive(const std::string &name, Function_Type function,
+                             bool var_arg = false) {
+    Define_Symbol(ip_->work_env, name, Make_Primitive(function, name, var_arg));
 }
 
 // Get the value that a binding has in a namespace. Looks through
@@ -938,22 +804,20 @@ Cell Get_Value(Cell name_space, Cell symbol);
 // Method to output a cell to an output stream. The display argument
 // indicates whether this is a 'display' or a 'write' action
 // (influences the way strings and characters are outputted).
-void Write(Cell cell, std::ostream& str, bool display = false);
+void Write(Cell cell, std::ostream &str, bool display = false);
 
 // Some convenience functions related to Write.
-inline std::ostream& operator<<(std::ostream& os, Cell cell)
-{
-  Write(cell, os);
-  return os;
+inline std::ostream &operator<<(std::ostream &os, Cell cell) {
+    Write(cell, os);
+    return os;
 }
 std::string Cell_To_String(Cell cell, bool display = false);
 
 // Read a cell from a stream.
-Cell Read(std::istream& stream);
-inline std::istream& operator>>(std::istream& is, Cell& cell)
-{
-  cell = Read(is);
-  return is;
+Cell Read(std::istream &stream);
+inline std::istream &operator>>(std::istream &is, Cell &cell) {
+    cell = Read(is);
+    return is;
 }
 
 // Starts a read-eval-print loop. This will not return until in.input
@@ -961,31 +825,30 @@ inline std::istream& operator>>(std::istream& is, Cell& cell)
 void Run_REPL(bool welcome_message = true);
 // Loads a file (just executes the load function defined in init.scm
 // with the file as argument)
-void Load_File(const std::string& filename);
+void Load_File(const std::string &filename);
 // Evaluate a string or an expression. Only the first expression in
 // the given string is evaluated.
-Cell Eval_String(const std::string& str, const MCell& name_space, bool handle_errors = false);
-inline Cell Eval_String(const std::string& str, bool handle_errors = false)
-{
-  return Eval_String(str, ip_->work_env, handle_errors);
+Cell Eval_String(const std::string &str, const MCell &name_space,
+                 bool handle_errors = false);
+inline Cell Eval_String(const std::string &str, bool handle_errors = false) {
+    return Eval_String(str, ip_->work_env, handle_errors);
 }
-Cell Eval_Expression(Cell expression, Cell name_space, bool handle_errors = false);
-inline Cell Eval_Expression(Cell expression, bool handle_errors = false)
-{
-  return Eval_Expression(expression, ip_->work_env, handle_errors);
+Cell Eval_Expression(Cell expression, Cell name_space,
+                     bool handle_errors = false);
+inline Cell Eval_Expression(Cell expression, bool handle_errors = false) {
+    return Eval_Expression(expression, ip_->work_env, handle_errors);
 }
 
 // A read eval print loop that does not wait for input to come from a
 // stream but has to be fed strings to run. The return value of
 // Add_Line indicates whether anything got evaluated (if the new
 // string did not finish a full expression it is false).
-class String_REPL
-{
-public:
-  bool Add_Line(const std::string& str);
-  
-private:
-  String_Input_Splitter _input;
+class String_REPL {
+  public:
+    bool Add_Line(const std::string &str);
+
+  private:
+    String_Input_Splitter _input;
 };
 
 // This is useful if you want to poll the output instead of have it go
@@ -993,16 +856,15 @@ private:
 // gives you any new output every time you call Get_New_Output. Makes
 // the assumption that no one else messes with in.output while it is
 // alive.
-class Output_Catcher
-{
-public:
-  Output_Catcher();
-  ~Output_Catcher();
-  std::string Get_New_Output();
+class Output_Catcher {
+  public:
+    Output_Catcher();
+    ~Output_Catcher();
+    std::string Get_New_Output();
 
-private:
-  std::ostringstream _stream;
-  MCell _old_stream;
+  private:
+    std::ostringstream _stream;
+    MCell _old_stream;
 };
 
 // Pointer wrappers are a convenient way of wrapping C++ objects in
@@ -1016,42 +878,32 @@ private:
 // the actual constructor function yourself is that you may want to
 // have it take arguments, or behave in some special way.
 #ifdef WITH_DESTRUCTORS
-template<class T>
-class Pointer_Wrapper
-{
-public:
-  static Cell_Type type_id;
+template <class T> class Pointer_Wrapper {
+  public:
+    static Cell_Type type_id;
 
-  static void Default_Write(Cell cell, std::ostream& str, bool display)
-  {
-    str << "#<wrapped pointer>";
-  }
-  static void Destroy(Cell data)
-  {
-    delete Extract<T*>(data);
-  }
+    static void Default_Write(Cell cell, std::ostream &str, bool display) {
+        str << "#<wrapped pointer>";
+    }
+    static void Destroy(Cell data) { delete Extract<T *>(data); }
 
-  template<typename Function_Type>
-  static void Init_Type(std::string constructor_name, Function_Type create, Write_Function write = Default_Write)
-  {
-    type_id = Make_Type(write, Destroy);
-    Define_Primitive(constructor_name, create);
-  }
-  
-  static Cell Wrap_Object(T* object)
-  {
-    Cell new_cell = Allocate_Cell<T*>(type_id, 0);
-    Extract<T*>(new_cell) = object;
-    return new_cell;
-  }
+    template <typename Function_Type>
+    static void Init_Type(std::string constructor_name, Function_Type create,
+                          Write_Function write = Default_Write) {
+        type_id = Make_Type(write, Destroy);
+        Define_Primitive(constructor_name, create);
+    }
+
+    static Cell Wrap_Object(T *object) {
+        Cell new_cell = Allocate_Cell<T *>(type_id, 0);
+        Extract<T *>(new_cell) = object;
+        return new_cell;
+    }
 };
 
-template<class T>
-Cell_Type Pointer_Wrapper<T>::type_id = 0;
+template <class T> Cell_Type Pointer_Wrapper<T>::type_id = 0;
 #endif
 
-}
+} // namespace uls
 
 #include "undef_error.hpp"
-
-#endif //SCHEME_HPP
