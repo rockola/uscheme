@@ -3305,8 +3305,10 @@ Cell Expander::Expand_Form(Cell syntax, Cell tail, bool define_allowed)
     break;
     
   default:
-    throw Scheme_Error("unknown special form");
+      ; //
   }
+
+  throw Scheme_Error("unknown special form");
 }
 
 // Expand an arbitraty expression
