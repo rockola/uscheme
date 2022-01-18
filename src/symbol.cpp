@@ -23,154 +23,135 @@
  * marijn(at)haverbeke.nl
  */
 
+#include "symbol.hpp"
+#include "error.hpp"
+#include "type.hpp"
 #include <algorithm>
 #include <vector>
-#include "error.hpp"
-#include "symbol.hpp"
-#include "type.hpp"
 
-namespace uls{
+namespace uls {
 
-namespace{
-  // Symbols consist of 10 bit (the lowest 10) of hash, and the rest
-  // of the value is an ID that is used to distinguish the symbol from
-  // other symbols with the same hash code. Symbols and strings can
-  // both be converted to hash numbers this way, which makes both
-  // symbols and their names useful keys for the hash table.
-  const size_t table_size = 521;
-  const size_t hash_width = 10, hash_mask = 1023;
-  
-  inline Symbol Make_Symbol(size_t hash, size_t id)
-  {
+namespace {
+// Symbols consist of 10 bit (the lowest 10) of hash, and the rest
+// of the value is an ID that is used to distinguish the symbol from
+// other symbols with the same hash code. Symbols and strings can
+// both be converted to hash numbers this way, which makes both
+// symbols and their names useful keys for the hash table.
+const size_t table_size = 521;
+const size_t hash_width = 10, hash_mask = 1023;
+
+inline Symbol Make_Symbol(size_t hash, size_t id) {
     return hash + (id << hash_width);
-  }
-  inline size_t Symbol_Hash(Symbol sym)
-  {
-    return (sym & hash_mask);
-  }
-  inline size_t Symbol_ID(Symbol sym)
-  {
-    return (sym >> hash_width);
-  }
-  size_t Hash_String(const std::string& str)
-  {
+}
+inline size_t Symbol_Hash(Symbol sym) { return (sym & hash_mask); }
+inline size_t Symbol_ID(Symbol sym) { return (sym >> hash_width); }
+size_t Hash_String(const std::string &str) {
     size_t max = std::min(str.size(), static_cast<size_t>(4));
     size_t accum = 0;
     for (size_t i = 0; i != max; ++i)
-      accum += (str[i] << i * byte_size);
+        accum += (str[i] << i * byte_size);
     return accum % table_size;
-  }
-  
-  class Symbol_Table
-  {
+}
+
+class Symbol_Table {
   public:
     Symbol_Table();
     ~Symbol_Table();
 
-    Symbol Get_Symbol(const std::string& str);
-    Symbol Has_Symbol(const std::string& str) const;
-    const std::string& Get_Name(Symbol s) const;
+    Symbol Get_Symbol(const std::string &str);
+    Symbol Has_Symbol(const std::string &str) const;
+    const std::string &Get_Name(Symbol s) const;
 
   private:
-    struct Entry
-    {
-      Entry(size_t id, const std::string& name, Entry* next)
-        : id(id), name(name), next(next) {}
-      size_t id;
-      std::string name;
-      Entry* next;
+    struct Entry {
+        Entry(size_t id, const std::string &name, Entry *next)
+            : id(id), name(name), next(next) {}
+        size_t id;
+        std::string name;
+        Entry *next;
     };
-    std::vector<Entry*> _table;
-  };
+    std::vector<Entry *> _table;
+};
 
-  Symbol_Table::Symbol_Table()
-    : _table(table_size, NULL)
-  {}
+Symbol_Table::Symbol_Table() : _table(table_size, NULL) {}
 
-  Symbol_Table::~Symbol_Table()
-  {
-    for (size_t i = 0; i != table_size; ++i){
-      for (Entry* cur = _table[i]; cur != NULL;){
-        Entry* temp = cur;
-        cur = cur->next;
-        delete temp;
-      }
+Symbol_Table::~Symbol_Table() {
+    for (size_t i = 0; i != table_size; ++i) {
+        for (Entry *cur = _table[i]; cur != NULL;) {
+            Entry *temp = cur;
+            cur = cur->next;
+            delete temp;
+        }
     }
-  }
+}
 
-  Symbol Symbol_Table::Get_Symbol(const std::string& str)
-  {
+Symbol Symbol_Table::Get_Symbol(const std::string &str) {
     size_t hash = Hash_String(str);
     size_t id = 0;
-    for (Entry* current = _table[hash]; current != NULL; current = current->next){
-      if (str == current->name){
-        id = current->id;
-        break;
-      }
+    for (Entry *current = _table[hash]; current != NULL;
+         current = current->next) {
+        if (str == current->name) {
+            id = current->id;
+            break;
+        }
     }
-    if (id == 0){
-      Entry* front = _table[hash];
-      id = (front == NULL) ? 1 : front->id + 1;
-      Entry* new_entry = new Entry(id, str, front);
-      _table[hash] = new_entry;
+    if (id == 0) {
+        Entry *front = _table[hash];
+        id = (front == NULL) ? 1 : front->id + 1;
+        Entry *new_entry = new Entry(id, str, front);
+        _table[hash] = new_entry;
     }
 
     return Make_Symbol(hash, id);
-  }
+}
 
-  Symbol Symbol_Table::Has_Symbol(const std::string& str) const
-  {
+Symbol Symbol_Table::Has_Symbol(const std::string &str) const {
     size_t hash = Hash_String(str);
     size_t id = 0;
-    for (Entry* current = _table[hash]; current != NULL; current = current->next){
-      if (str == current->name){
-        id = current->id;
-        break;
-      }
+    for (Entry *current = _table[hash]; current != NULL;
+         current = current->next) {
+        if (str == current->name) {
+            id = current->id;
+            break;
+        }
     }
     if (id == 0)
-      return null_symbol;
+        return null_symbol;
     else
-      return Make_Symbol(hash, id);
-  }
+        return Make_Symbol(hash, id);
+}
 
-  const std::string& Symbol_Table::Get_Name(Symbol s) const
-  {
+const std::string &Symbol_Table::Get_Name(Symbol s) const {
     const static std::string unnamed("unnamed symbol");
     size_t hash = Symbol_Hash(s);
     if (hash >= table_size)
-      return unnamed;
+        return unnamed;
     size_t id = Symbol_ID(s);
-    
-    for (Entry* current = _table[hash]; current != NULL; current = current->next){
-      if (current->id == id)
-        return current->name;
+
+    for (Entry *current = _table[hash]; current != NULL;
+         current = current->next) {
+        if (current->id == id)
+            return current->name;
     }
     return unnamed;
-  }
+}
 
-  // The exists only one Symbol_Table, and this function is how the
-  // functions below access it.
-  Symbol_Table& Get_Table()
-  {
+// The exists only one Symbol_Table, and this function is how the
+// functions below access it.
+Symbol_Table &Get_Table() {
     static Symbol_Table table;
     return table;
-  }
+}
+} // namespace
+
+Symbol Get_Symbol(const std::string &word) {
+    return Get_Table().Get_Symbol(word);
 }
 
-Symbol Get_Symbol(const std::string& word)
-{
-  return Get_Table().Get_Symbol(word);
+Symbol Find_Symbol(const std::string &word) {
+    return Get_Table().Has_Symbol(word);
 }
 
-Symbol Find_Symbol(const std::string& word)
-{
-  return Get_Table().Has_Symbol(word);
-}
+const std::string &Get_Symbol_Name(Symbol s) { return Get_Table().Get_Name(s); }
 
-const std::string& Get_Symbol_Name(Symbol s)
-{
-  return Get_Table().Get_Name(s);
-}
-
-}
+} // namespace uls

@@ -27,19 +27,16 @@
 
 #include "scheme.hpp"
 
-int main()
-{
-  try{
-    uls::Interpreter in(2000);
-    uls::Run_REPL(true);
-    return 0;
-  }
-  catch (const std::exception& e){
-    std::cout << "Fatal error: " << e.what() << std::endl;
-    return 1;
-  }
-  catch (...){
-    std::cout << "Fatal (unknown) error." << std::endl;
-    return 1;
-  }
+int main() {
+    try {
+        uls::Interpreter in(2000);
+        uls::Run_REPL(true);
+        return 0;
+    } catch (const std::exception &e) {
+        std::cout << "Fatal error: " << e.what() << std::endl;
+        return 1;
+    } catch (...) {
+        std::cout << "Fatal (unknown) error." << std::endl;
+        return 1;
+    }
 }
