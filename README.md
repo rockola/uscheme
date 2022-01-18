@@ -2,7 +2,17 @@
 
 by Marijn Haverbeke
 
-README (for version .45, October 7th 2004)
+## Build
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+## Original README
+
+by Marijn Haverbeke (for version .45, October 7th 2004)
 
 ## Introduction
 
