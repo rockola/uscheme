@@ -23,8 +23,7 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef ERROR_MACROS_HPP
-#define ERROR_MACROS_HPP
+#pragma once
 
 #include <stdexcept>
 
@@ -32,20 +31,21 @@
 
 #define S_THROW(error_type, message) throw error_type(message)
 
-#define S_ASSERT(expr) 
+#define S_ASSERT(expr)
 
 #else // NDEBUG
 
 #include <sstream>
 
-inline std::string Macro_Mark_String(std::string target, const char* file, int line)
-{
-  std::ostringstream new_string;
-  new_string << target << " (" << file << " at line " << line << ")";
-  return new_string.str();
+inline std::string Macro_Mark_String(std::string target, const char *file,
+                                     int line) {
+    std::ostringstream new_string;
+    new_string << target << " (" << file << " at line " << line << ")";
+    return new_string.str();
 }
 
-#define S_THROW(error_type, message) throw error_type(Macro_Mark_String(message, __FILE__, __LINE__))
+#define S_THROW(error_type, message)                                           \
+    throw error_type(Macro_Mark_String(message, __FILE__, __LINE__))
 
 #ifdef _WIN32
 #define S_DIE() exit(1)
@@ -54,28 +54,33 @@ inline std::string Macro_Mark_String(std::string target, const char* file, int l
 #define S_DIE() kill(0, SIGTERM)
 #endif
 #include <iostream>
-#define S_ASSERT(expr) if (!(expr)){std::cout << Macro_Mark_String("Assertion (" #expr ") failed.", __FILE__, __LINE__) << std::endl;\
-                                  S_DIE();} else
+#define S_ASSERT(expr)                                                         \
+    if (!(expr)) {                                                             \
+        std::cout << Macro_Mark_String("Assertion (" #expr ") failed.",        \
+                                       __FILE__, __LINE__)                     \
+                  << std::endl;                                                \
+        S_DIE();                                                               \
+    } else
 
 #endif // NDEBUG
 
 #ifndef SCHEME_ERROR_DEFINED
 #define SCHEME_ERROR_DEFINED
-namespace uls{
-class Scheme_Error: public std::exception
-{
-public:
-  Scheme_Error(const std::string& message): _message(message){}
-  virtual ~Scheme_Error() throw(){}
-  
-  virtual const char* what() const throw(){return _message.c_str();}
-  
-private:
-  std::string _message;
+namespace uls {
+class Scheme_Error : public std::exception {
+  public:
+    Scheme_Error(const std::string &message) : _message(message) {}
+    virtual ~Scheme_Error() throw() {}
+
+    virtual const char *what() const throw() { return _message.c_str(); }
+
+  private:
+    std::string _message;
 };
-}
-#endif //SCHEME_ERROR_DEFINED
+} // namespace uls
+#endif // SCHEME_ERROR_DEFINED
 
-#define S_CHECK(test, message) if (!(test)) throw Scheme_Error(message); else
-
-#endif //ERROR_MACROS_HPP
+#define S_CHECK(test, message)                                                 \
+    if (!(test))                                                               \
+        throw Scheme_Error(message);                                           \
+    else

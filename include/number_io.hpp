@@ -23,15 +23,14 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef NUMBER_IO_HPP
-#define NUMBER_IO_HPP
+#pragma once
 
 #include <ostream>
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "type.hpp"
 #include "bignum.hpp"
+#include "type.hpp"
 
 // Used to convert numbers to and from text. This was needed for two
 // reasons - Firstly I wanted to support a lot of radixes, and
@@ -42,17 +41,17 @@
 // scheme.cpp already had strings, and strings are easy to read
 // backwards, while the output functions worked with streams.
 
-namespace uls{
+namespace uls {
 
-double String_To_Double(const std::string& str, size_t radix = 10);
-int64 String_To_Int(const std::string& str, size_t radix = 10);
+double String_To_Double(const std::string &str, size_t radix = 10);
+int64 String_To_Int(const std::string &str, size_t radix = 10);
 // Return value indicates the sign of the number, true is negative
-bool String_To_Array(const std::string& str, std::vector<digit>& array, size_t radix = 10);
+bool String_To_Array(const std::string &str, std::vector<digit> &array,
+                     size_t radix = 10);
 
-void Write_Double(std::ostream& stream, double value, size_t radix = 10);
-void Write_Int(std::ostream& stream, int value, size_t radix = 10);
-void Write_Array(std::ostream& stream, const digit* array, size_t size, bool negative, size_t radix = 10);
+void Write_Double(std::ostream &stream, double value, size_t radix = 10);
+void Write_Int(std::ostream &stream, int value, size_t radix = 10);
+void Write_Array(std::ostream &stream, const digit *array, size_t size,
+                 bool negative, size_t radix = 10);
 
-}
-
-#endif //NUMBER_IO_HPP
+} // namespace uls

@@ -23,8 +23,7 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef BIGNUM_HPP
-#define BIGNUM_HPP
+#pragma once
 
 #include "type.hpp"
 
@@ -33,39 +32,37 @@
 // because there are two representations of bignums - inside cells and
 // as Array_Buffers.
 
-namespace uls{
+namespace uls {
 
 // The digit type and some conts to make messing with it easier.
 typedef unsigned int digit;
 const size_t digit_size = byte_size * sizeof(digit);
-const uint64 digit_radix = (static_cast<uint64>(1) << digit_size), digit_mask = digit_radix - 1;
+const uint64 digit_radix = (static_cast<uint64>(1) << digit_size),
+             digit_mask = digit_radix - 1;
 
 // Buffers to keep bignums in during calculations.
-digit* Allocate_Array(int size);
-struct Array_Buffer
-{
-  explicit Array_Buffer(int s)
-    : size(s),
-      data(Allocate_Array(size))
-  {}
-  ~Array_Buffer()
-  {
-    Allocate_Array(-size);
-  }
-  size_t size;
-  digit* data;
+digit *Allocate_Array(int size);
+struct Array_Buffer {
+    explicit Array_Buffer(int s) : size(s), data(Allocate_Array(size)) {}
+    ~Array_Buffer() { Allocate_Array(-size); }
+    size_t size;
+    digit *data;
 };
 
 // The operations. Add and subtract allow the result buffer to be the
 // same as one of the source buffers, with multiply and divide this
 // does not work.
-bool Array_Zero(const digit* one, size_t s_one);
-bool Array_Smaller(const digit* one, size_t s_one, const digit* two, size_t s_two);
-void Add_Arrays(const digit* one, size_t s_one, const digit* two, size_t s_two, digit* result, size_t s_result);
-void Subtract_Arrays(const digit* one, size_t s_one, const digit* two, size_t s_two, digit* result, size_t s_result);
-void Multiply_Arrays(const digit* one, size_t s_one, const digit* two, size_t s_two, digit* result, size_t s_result);
-void Divide_Arrays(const digit* one, size_t s_one, const digit* two, size_t s_two, digit* quotient, size_t s_quotient, digit* remain, size_t s_remain);
+bool Array_Zero(const digit *one, size_t s_one);
+bool Array_Smaller(const digit *one, size_t s_one, const digit *two,
+                   size_t s_two);
+void Add_Arrays(const digit *one, size_t s_one, const digit *two, size_t s_two,
+                digit *result, size_t s_result);
+void Subtract_Arrays(const digit *one, size_t s_one, const digit *two,
+                     size_t s_two, digit *result, size_t s_result);
+void Multiply_Arrays(const digit *one, size_t s_one, const digit *two,
+                     size_t s_two, digit *result, size_t s_result);
+void Divide_Arrays(const digit *one, size_t s_one, const digit *two,
+                   size_t s_two, digit *quotient, size_t s_quotient,
+                   digit *remain, size_t s_remain);
 
-}
-
-#endif //BIGNUM_HPP
+} // namespace uls

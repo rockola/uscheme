@@ -23,12 +23,11 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef INPUT_SPLITTER_HPP
-#define INPUT_SPLITTER_HPP
+#pragma once
 
-#include <string>
 #include <deque>
 #include <istream>
+#include <string>
 
 // System to split input into element-sized strings. An abstract base
 // class with two implementations is provided - one for strings and
@@ -38,71 +37,64 @@
 // see if a full expression has been entered before an expression can
 // be read.
 
-namespace uls{
+namespace uls {
 
-inline bool Is_Whitespace(char c)
-{
-  return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
+inline bool Is_Whitespace(char c) {
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
 }
 
-class Input_Splitter
-{
-public:
-  virtual ~Input_Splitter(){}
+class Input_Splitter {
+  public:
+    virtual ~Input_Splitter() {}
 
-  virtual const std::string& Current() = 0;
-  virtual void Advance(bool allow_eof = true) = 0;
+    virtual const std::string &Current() = 0;
+    virtual void Advance(bool allow_eof = true) = 0;
 };
 
-class String_Input_Splitter: public Input_Splitter
-{
-public:
-  String_Input_Splitter();
+class String_Input_Splitter : public Input_Splitter {
+  public:
+    String_Input_Splitter();
 
-  virtual const std::string& Current();
-  virtual void Advance(bool allow_eof = true);
+    virtual const std::string &Current();
+    virtual void Advance(bool allow_eof = true);
 
-  void Add_Line(const std::string& str);
-  bool Full_Expression();
-  void Reset();
-  
-private:
-  void Add_Part(const std::string& part, bool can_be_finished = true);
-  
-  std::deque<std::string> _parts;
-  std::string _unfinished;
-  bool _in_string;
-  int _open_parens;
-  size_t _finished_part;
+    void Add_Line(const std::string &str);
+    bool Full_Expression();
+    void Reset();
+
+  private:
+    void Add_Part(const std::string &part, bool can_be_finished = true);
+
+    std::deque<std::string> _parts;
+    std::string _unfinished;
+    bool _in_string;
+    int _open_parens;
+    size_t _finished_part;
 };
 
-class Stream_Input_Splitter: public Input_Splitter
-{
-public:
-  Stream_Input_Splitter(std::istream& stream);
+class Stream_Input_Splitter : public Input_Splitter {
+  public:
+    Stream_Input_Splitter(std::istream &stream);
 
-  virtual const std::string& Current();
-  virtual void Advance(bool allow_eof = true);
+    virtual const std::string &Current();
+    virtual void Advance(bool allow_eof = true);
 
-  bool Eof(){return _stream.eof();}
-  size_t Lines_Read(){return _lines_read;}
+    bool Eof() { return _stream.eof(); }
+    size_t Lines_Read() { return _lines_read; }
 
-private:
-  void Read_Part();
-  char Get_Char()
-  {
-    char retval = _stream.get();
-    if (retval == '\n')
-      ++_lines_read;
-    return retval;
-  }
-  
-  std::istream& _stream;
-  std::string _current;
-  size_t _lines_read;
-  bool _allow_eof;
+  private:
+    void Read_Part();
+    char Get_Char() {
+        char retval = _stream.get();
+        if (retval == '\n')
+            ++_lines_read;
+        return retval;
+    }
+
+    std::istream &_stream;
+    std::string _current;
+    size_t _lines_read;
+    bool _allow_eof;
 };
 
-}
-
-#endif //INPUT_SPLITTER_HPP
+} // namespace uls

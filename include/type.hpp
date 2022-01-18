@@ -23,8 +23,7 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef TYPE_HPP
-#define TYPE_HPP
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -32,17 +31,15 @@
 // Some typedefs and constant to make some bit-twiddling operations
 // and typenames a little less ugly.
 
-namespace uls{
+namespace uls {
 
 typedef std::byte byte;
 typedef int64_t int64;
 typedef uint64_t uint64;
 const size_t byte_size = 8;
-const std::byte max_byte = (std::byte) 0xFF;
+const std::byte max_byte = (std::byte)0xFF;
 const std::uint16_t max_short = 0xFFFF;
 // TODO 64-bit fixnums
 const size_t max_int = 0xFFFFFFFF;
 
-}
-
-#endif //TYPE_HPP
+} // namespace uls

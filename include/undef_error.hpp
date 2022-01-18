@@ -7,4 +7,4 @@
 #undef S_DIE
 #endif
 
-#endif //ERROR_MACRO_HPP
+#endif // ERROR_MACRO_HPP

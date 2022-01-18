@@ -23,8 +23,7 @@
  * marijn(at)haverbeke.nl
  */
 
-#ifndef SYMBOL_HPP
-#define SYMBOL_HPP
+#pragma once
 
 #include <string>
 
@@ -37,15 +36,13 @@
 // that this module is not dependant on any Interpreter and that the
 // symbols can be used for other purposes than scheme symbols.
 
-namespace uls{
+namespace uls {
 
 typedef size_t Symbol;
 const Symbol null_symbol = 0;
 
-Symbol Get_Symbol(const std::string& word);
-Symbol Find_Symbol(const std::string& word);
-const std::string& Get_Symbol_Name(Symbol s);
+Symbol Get_Symbol(const std::string &word);
+Symbol Find_Symbol(const std::string &word);
+const std::string &Get_Symbol_Name(Symbol s);
 
-}
-
-#endif //SYMBOL_HPP
+} // namespace uls

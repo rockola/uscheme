@@ -27,18 +27,18 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
-#include <vector>
 #include <fstream>
 #include <sstream>
+#include <string>
+#include <vector>
 
-#include "type.hpp"
+#include "error.hpp"         // Various error reporting things.
+#include "inputsplitter.hpp" // Used to split input into tokens.
 #include "noncopyable.hpp"
-#include "error.hpp"  // Various error reporting things.
-#include "inputsplitter.hpp"  // Used to split input into tokens.
-#include "symbol.hpp"  // Associate strings with numbers.
+#include "symbol.hpp" // Associate strings with numbers.
+#include "type.hpp"
 
-namespace uls{
+namespace uls {
 
 // ,CELL
 
@@ -46,7 +46,7 @@ namespace uls{
 // non-pointer cell types. The top bits of the cell indicate the type.
 // When the top bit is 1 it is an integer, when the top two bits are 0
 // it is a pointer, etc.
-  
+
 // 1 bit patterns
 const uintptr_t int_pattern = 1;
 // 2 bit patterns
