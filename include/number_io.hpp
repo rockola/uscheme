@@ -54,4 +54,13 @@ void Write_Int(std::ostream &stream, int value, size_t radix = 10);
 void Write_Array(std::ostream &stream, const digit *array, size_t size,
                  bool negative, size_t radix = 10);
 
+std::string Number_To_String(Cell num, size_t radix = 10);
+
+// ,REAL
+
+// Reals are easy.
+inline void Write_Real(Cell cell, std::ostream &str, bool display) {
+    Write_Double(str, Real_Value(cell));
+}
+
 } // namespace uls

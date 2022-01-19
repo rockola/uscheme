@@ -3,11 +3,25 @@ link_directories(${uscheme_SOURCE_DIR}/src)
 
 add_executable(uscheme
   bignum.cpp
+  cell.cpp
+  closure.cpp
+  compiler.cpp
   inputsplitter.cpp
+  instruction.cpp
+  interpreter.cpp
+  list.cpp
+  macro.cpp
   main.cpp
+  mcell.cpp
+  memory_manager.cpp
+  namespace.cpp
   number_io.cpp
-  scheme.cpp
+  output.cpp
+  primitive.cpp
+  string.cpp
   symbol.cpp
+  syntax.cpp
+  vector.cpp
   )
 
 

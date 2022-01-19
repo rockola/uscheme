@@ -28,6 +28,7 @@
 #include <deque>
 #include <istream>
 #include <string>
+#include "cell.hpp"
 
 // System to split input into element-sized strings. An abstract base
 // class with two implementations is provided - one for strings and
@@ -49,6 +50,8 @@ class Input_Splitter {
 
     virtual const std::string &Current() = 0;
     virtual void Advance(bool allow_eof = true) = 0;
+
+    Cell Read(bool allow_eof = true);
 };
 
 class String_Input_Splitter : public Input_Splitter {

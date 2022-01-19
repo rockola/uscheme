@@ -25,8 +25,24 @@
 
 #include "inputsplitter.hpp"
 #include "error.hpp"
+#include "primitive.hpp"
+#include "string.hpp"
+#include "vector.hpp"
+#include "instruction.hpp"
 
 namespace uls {
+
+// for comparing character names
+bool String_Compare_Insensitive(const std::string &one,
+                                const std::string &two) {
+    if (one.size() != two.size())
+        return false;
+    for (size_t i = 0; i != one.size(); ++i) {
+        if (std::tolower(one[i]) != std::tolower(two[i]))
+            return false;
+    }
+    return true;
+}
 
 String_Input_Splitter::String_Input_Splitter()
     : _in_string(false), _open_parens(0), _finished_part(0) {}
@@ -44,7 +60,6 @@ void String_Input_Splitter::Advance(bool allow_eof) {
     S_ASSERT(_finished_part >= 0);
 }
 
-namespace {
 size_t String_End(const std::string &str, size_t string_start) {
     for (size_t i = string_start + 1; i < str.size(); ++i) {
         if (str[i] == '"' && !(i > 0 && str[i - 1] == '\\'))
@@ -72,7 +87,6 @@ size_t Next_Delimiter(const std::string &str, size_t start) {
     }
     return str.size();
 }
-} // namespace
 
 void String_Input_Splitter::Add_Line(const std::string &str) {
     size_t pos = 0;
@@ -222,6 +236,138 @@ void Stream_Input_Splitter::Read_Part() {
     }
 
     S_ASSERT(!_current.empty());
+}
+
+
+// Convert elements from an Input_Splitter into cells. Reads one whole
+// expression. This is a bit of an overgrown monster function... It is
+// important that whenever something throws because of invalid input,
+// it FIRST advances past that invalid input - otherwise the system
+// will go into an infinite loop over that same invalid input.
+Cell Input_Splitter::Read(bool allow_eof) {
+    const std::string &cur = Current();
+
+    if (cur == "(") { // a list
+        Advance(false);
+        List_Builder new_list;
+
+        while (true) {
+            if (Current() == ")") {
+                Advance(allow_eof);
+                break;
+            } else {
+                new_list.Add_Element(Read(false));
+
+                if (Current() == ".") {
+                    Advance(false);
+                    new_list.Add_End(Read(false));
+                    S_CHECK(Current() == ")", "not a valid pair");
+                    Advance(false);
+                    break;
+                }
+            }
+        }
+        return new_list.List();
+    } else if (cur[0] == '"') { // a string
+        S_ASSERT(cur.size() >= 2);
+        std::string value;
+        bool escaped = false;
+        for (size_t i = 1; i < cur.size() - 1; ++i) {
+            if (cur[i] != '\\' || escaped) {
+                value += cur[i];
+                escaped = false;
+            } else {
+                escaped = true;
+            }
+        }
+        Advance(allow_eof);
+        return Make_String(value);
+    } else if (cur == "'") { // a quoted thingy
+        Advance(false);
+        static const Cell quote = Make_Symbol("quote");
+        return Cons(quote, Cons_Null(Read()));
+    } else if (cur == "`") { // quasiquoted
+        Advance(false);
+        static const Cell quasiquote = Make_Symbol("quasiquote");
+        return Cons(quasiquote, Cons_Null(Read()));
+    } else if (cur == ",") { // unquoted
+        Advance(false);
+        static const Cell unquote = Make_Symbol("unquote");
+        return Cons(unquote, Cons_Null(Read()));
+    } else if (cur == ",@") { // splicing-unquoted
+        Advance(false);
+        static const Cell unquote_splicing = Make_Symbol("unquote-splicing");
+        return Cons(unquote_splicing, Cons_Null(Read()));
+    } else if (cur == "#(") { // a vector
+        Advance(false);
+        MStack elements;
+        while (Current() != ")")
+            elements.Push(Read(false));
+        Advance(allow_eof);
+        Cell new_vec = Make_Vector(elements);
+        return new_vec;
+    } else if (cur[0] == '#') {
+        if (cur.size() < 2) { // single #
+            Advance(allow_eof);
+            throw Scheme_Error("invalid input: #");
+        }
+        char c = cur[1];
+        if (cur.size() == 2) { // special
+            Advance(allow_eof);
+            if (c == 't')
+                return true_cell;
+            else if (c == 'f')
+                return false_cell;
+            else if (c == 'v')
+                return void_cell;
+            else
+                throw Scheme_Error(std::string("unrecognized #-expression: #") +
+                                   c);
+        } else if (c == '\\') { // character
+            std::string charname(cur, 2);
+            Advance(allow_eof);
+            if (charname.size() == 1) {
+                return Make_Character(charname[0]);
+            } else if (String_Compare_Insensitive(charname, "space")) {
+                return Make_Character(' ');
+            } else if (String_Compare_Insensitive(charname, "newline")) {
+                return Make_Character('\n');
+            } else if (String_Compare_Insensitive(charname, "eof")) {
+                return eof_cell;
+            }
+            throw Scheme_Error("unknown character constant: #\\" + charname);
+        } else if (c == '%') { // instruction
+            std::string ins_name(cur, 2);
+            Advance(allow_eof);
+            return Make_Instruction(Find_Instruction(ins_name).instruction);
+        } else {
+            std::string error = "unrecognized #-expression: " + cur;
+            Advance();
+            throw Scheme_Error(error);
+        }
+    } else if (Is_Symbol_Start(cur[0]) ||
+               (Is_Ambiguous_Char(cur[0]) && cur.size() == 1) ||
+               cur == "...") { // symbol
+        std::string buffer;
+        for (std::string::const_iterator i = cur.begin(); i != cur.end(); ++i) {
+            if (!Is_Symbol_Char(*i)) {
+                buffer = "invalid character in symbol name: " + cur;
+                Advance();
+                throw Scheme_Error(buffer);
+            }
+            buffer += std::tolower(*i);
+        }
+        Advance(allow_eof);
+        return Make_Symbol(buffer);
+    } else if (Is_Number_Char(cur[0])) { // number
+        std::string saved = cur;
+        Advance(allow_eof);
+        return String_To_Number(saved);
+    } else { // wrong
+        std::string error = "unrecognized input: " + cur;
+        Advance();
+        throw Scheme_Error(error);
+    }
 }
 
 } // namespace uls

@@ -26,6 +26,8 @@
 #pragma once
 
 #include <string>
+#include "cell.hpp"
+#include "mcell.hpp"
 
 // Associate integer values with strings. Get_Symbol will create a new
 // association if none exist for that string, Find_Symbol will return
@@ -44,5 +46,38 @@ const Symbol null_symbol = 0;
 Symbol Get_Symbol(const std::string &word);
 Symbol Find_Symbol(const std::string &word);
 const std::string &Get_Symbol_Name(Symbol s);
+
+// First some utility functions to recognize the various kinds of
+// chars. Symbol start characters unambiguously mean the rest of the
+// element is a symbol.
+inline bool Is_Symbol_Start(char c) {
+    static const char specials[] = {'!', '$', '%', '&', '*', '/', ':', '<',
+                                    '=', '>', '?', '@', '^', '_', '~', 0};
+    if (std::isalpha(c))
+        return true;
+    for (const char *i = specials; *i != 0; ++i) {
+        if (c == *i)
+            return true;
+    }
+    return false;
+}
+
+// These represent a symbol when they are all by themselves, otherwise
+// they are a number.
+inline bool Is_Ambiguous_Char(char c) {
+    return (c == '+' || c == '-' || c == '.');
+}
+inline bool Is_Number_Char(char c) {
+    return (std::isdigit(c) || Is_Ambiguous_Char(c));
+}
+// Inside numbers slashes and exponents can appear.
+inline bool Is_Internal_Number_Char(char c) {
+    return Is_Number_Char(c) || c == 'e' || c == 'E' || c == '/';
+}
+// Inside symbols anything that is a symbol start or a number can
+// appear.
+inline bool Is_Symbol_Char(char c) {
+    return (Is_Symbol_Start(c) || Is_Number_Char(c));
+}
 
 } // namespace uls

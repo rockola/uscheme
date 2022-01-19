@@ -31,7 +31,6 @@
 
 namespace uls {
 
-namespace {
 // Symbols consist of 10 bit (the lowest 10) of hash, and the rest
 // of the value is an ID that is used to distinguish the symbol from
 // other symbols with the same hash code. Symbols and strings can
@@ -73,11 +72,11 @@ class Symbol_Table {
     std::vector<Entry *> _table;
 };
 
-Symbol_Table::Symbol_Table() : _table(table_size, NULL) {}
+Symbol_Table::Symbol_Table() : _table(table_size, nullptr) {}
 
 Symbol_Table::~Symbol_Table() {
     for (size_t i = 0; i != table_size; ++i) {
-        for (Entry *cur = _table[i]; cur != NULL;) {
+        for (Entry *cur = _table[i]; cur != nullptr;) {
             Entry *temp = cur;
             cur = cur->next;
             delete temp;
@@ -88,7 +87,7 @@ Symbol_Table::~Symbol_Table() {
 Symbol Symbol_Table::Get_Symbol(const std::string &str) {
     size_t hash = Hash_String(str);
     size_t id = 0;
-    for (Entry *current = _table[hash]; current != NULL;
+    for (Entry *current = _table[hash]; current != nullptr;
          current = current->next) {
         if (str == current->name) {
             id = current->id;
@@ -97,7 +96,7 @@ Symbol Symbol_Table::Get_Symbol(const std::string &str) {
     }
     if (id == 0) {
         Entry *front = _table[hash];
-        id = (front == NULL) ? 1 : front->id + 1;
+        id = (front == nullptr) ? 1 : front->id + 1;
         Entry *new_entry = new Entry(id, str, front);
         _table[hash] = new_entry;
     }
@@ -108,7 +107,7 @@ Symbol Symbol_Table::Get_Symbol(const std::string &str) {
 Symbol Symbol_Table::Has_Symbol(const std::string &str) const {
     size_t hash = Hash_String(str);
     size_t id = 0;
-    for (Entry *current = _table[hash]; current != NULL;
+    for (Entry *current = _table[hash]; current != nullptr;
          current = current->next) {
         if (str == current->name) {
             id = current->id;
@@ -128,7 +127,7 @@ const std::string &Symbol_Table::Get_Name(Symbol s) const {
         return unnamed;
     size_t id = Symbol_ID(s);
 
-    for (Entry *current = _table[hash]; current != NULL;
+    for (Entry *current = _table[hash]; current != nullptr;
          current = current->next) {
         if (current->id == id)
             return current->name;
@@ -142,7 +141,6 @@ Symbol_Table &Get_Table() {
     static Symbol_Table table;
     return table;
 }
-} // namespace
 
 Symbol Get_Symbol(const std::string &word) {
     return Get_Table().Get_Symbol(word);

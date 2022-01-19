@@ -25,12 +25,12 @@
 
 #include <iostream>
 
-#include "scheme.hpp"
+#include "interpreter.hpp"
 
 int main() {
     try {
         uls::Interpreter in(2000);
-        uls::Run_REPL(true);
+        in.Run_REPL(true);
         return 0;
     } catch (const std::exception &e) {
         std::cout << "Fatal error: " << e.what() << std::endl;

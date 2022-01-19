@@ -27,11 +27,13 @@
 #include <vector>
 
 #include "bignum.hpp"
+#include "mcell.hpp"
+#include "number_io.hpp"
 #include "error.hpp"
 
 namespace uls {
 
-const size_t bignum_buffer_size = 400;
+constexpr size_t bignum_buffer_size = 400;
 
 class Array_Manager {
   public:
@@ -243,6 +245,441 @@ void Divide_Arrays(const digit *one, size_t s_one, const digit *two,
             quotient[pos] = hold;
             ++pos;
         } while (carry != 0);
+    }
+}
+
+// ,BIGNUM
+
+// Construct a bignum from an array of digits. Will remove trailing
+// zero's but will not convert to a fixnum automatically.
+Cell Make_Bignum(digit *value, size_t size, bool negative) {
+    while (size != 0 && value[size - 1] == 0)
+        --size;
+    Cell retval =
+        Allocate(sizeof(Bignum_Data) - sizeof(digit) + size * sizeof(digit),
+                 bignum_type, (std::byte) 0);
+    Bignum_Data &data = Extract<Bignum_Data>(retval);
+    data.size = size;
+    data.negative = negative;
+    for (size_t i = 0; i != size; ++i)
+        data.data[i] = value[i];
+    return retval;
+}
+// Construct a bignum from a 64-bit int. Will create a bignum even if
+// a fixnum would be possible (operations on bignums require two
+// bignums, not a bignum and a fixnum).
+Cell Make_Bignum(int64 value) {
+    bool negative = value < 0;
+    if (negative)
+        value = -value;
+    if (value < static_cast<int64>(digit_radix)) {
+        digit val = value;
+        return Make_Bignum(&val, 1, negative);
+    } else {
+        digit val[2];
+        val[0] = value;
+        val[1] = (value >> digit_size);
+        return Make_Bignum(val, 2, negative);
+    }
+}
+// Make an integer from an array of digits. This one will convert to
+// fixnum if possible.
+Cell Make_Integer(digit *value, size_t size, bool negative) {
+    while (size != 0 && value[size - 1] == 0)
+        --size;
+    if (size == 0)
+        return zero_cell;
+    else if (size == 1 && value[0] < max_fixnum)
+        return Make_Fixnum(negative ? -value[0] : value[0]);
+    else
+        return Make_Bignum(value, size, negative);
+}
+
+// Compare two bignums for equality.
+bool Bignum_Equal(Cell one, Cell two) {
+    Bignum_Data &d_one = Get_Bignum_Data(one), &d_two = Get_Bignum_Data(two);
+    if (d_one.negative != d_two.negative || d_one.size != d_two.size)
+        return false;
+    for (size_t i = 0; i != d_one.size; ++i) {
+        if (d_one.data[i] != d_two.data[i])
+            return false;
+    }
+    return true;
+}
+
+// Compare two bignums to see if one is less than two.
+bool Bignum_Less(Cell one, Cell two) {
+    Bignum_Data &d_one = Get_Bignum_Data(one), &d_two = Get_Bignum_Data(two);
+    if (d_one.negative != d_two.negative)
+        return d_one.negative;
+
+    bool result = false;
+    if (d_one.size != d_two.size)
+        result = d_one.size < d_two.size;
+    else {
+        for (size_t i = d_one.size; i != 0; --i) {
+            digit i_one = d_one.data[i], i_two = d_two.data[i];
+            if (i_one != i_two) {
+                result = i_one < i_two;
+                break;
+            }
+        }
+    }
+
+    if (d_one.negative)
+        result = -result;
+    return result;
+}
+
+Cell Integer_Quotient(Cell one, Cell two) {
+    S_CHECK(two != zero_cell, "division by zero");
+    if (Is_Fixnum(one) && Is_Fixnum(two)) {
+        int64 result =
+            static_cast<int64>(Fixnum_Value(one)) / Fixnum_Value(two);
+        return Make_Integer(result);
+    } else {
+        MCell m_one = one, m_two = two;
+        if (Is_Fixnum(one))
+            m_one = Promote_Number(one, n_fixnum);
+        else if (Is_Fixnum(two))
+            m_two = Promote_Number(two, n_fixnum);
+
+        Bignum_Data &d_one = Get_Bignum_Data(m_one),
+                    &d_two = Get_Bignum_Data(m_two);
+        size_t s_max = std::max(d_one.size, d_two.size);
+        Array_Buffer quotient(s_max), remainder(s_max);
+        Divide_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                      quotient.data, quotient.size, remainder.data,
+                      remainder.size);
+        return Make_Integer(quotient.data, quotient.size,
+                            d_one.negative != d_two.negative);
+    }
+}
+Cell Integer_Remainder(Cell one, Cell two) {
+    S_CHECK(two != zero_cell, "division by zero");
+    if (Is_Fixnum(one) && Is_Fixnum(two)) {
+        int64 result =
+            static_cast<int64>(Fixnum_Value(one)) % Fixnum_Value(two);
+        return Make_Integer(result);
+    } else {
+        MCell m_one = one, m_two = two;
+        if (Is_Fixnum(one))
+            m_one = Promote_Number(one, n_fixnum);
+        else if (Is_Fixnum(two))
+            m_two = Promote_Number(two, n_fixnum);
+
+        Bignum_Data &d_one = Get_Bignum_Data(m_one),
+                    &d_two = Get_Bignum_Data(m_two);
+        size_t s_max = std::max(d_one.size, d_two.size);
+        Array_Buffer quotient(s_max), remainder(s_max);
+        Divide_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                      quotient.data, quotient.size, remainder.data,
+                      remainder.size);
+        return Make_Integer(remainder.data, remainder.size, d_one.negative);
+    }
+}
+Cell Integer_Modulo(Cell one, Cell two) {
+    if (Is_Fixnum(one) && Is_Fixnum(two)) {
+        int i_one = Fixnum_Value(one), i_two = Fixnum_Value(two);
+        int64 result = static_cast<int64>(i_one) % i_two;
+        if (result != 0 && (i_one < 0) != (i_two < 0))
+            result += i_two;
+        return Make_Integer(result);
+    } else {
+        bool needs_add = Integer_Negative(one) != Integer_Negative(two);
+        MCell m_two = two;
+        Cell remainder = Integer_Remainder(one, two);
+        if (remainder != zero_cell && needs_add)
+            remainder = Number_Add(remainder, m_two);
+        return remainder;
+    }
+}
+
+Cell Promote_Number(Cell num, Num_Type type) {
+    switch (type) {
+    case n_fixnum:
+        return Make_Bignum(Fixnum_Value(num));
+    case n_bignum:
+        return Make_Rational(num, one_cell);
+    case n_rational:
+        return Make_Real(Number_To_Double(num));
+    default:
+        S_ASSERT(false);
+        return invalid_cell;
+    }
+}
+
+// Convert any kind of number to a double.
+double Number_To_Double(Cell cell) {
+    if (Is_Fixnum(cell)) {
+        return static_cast<double>(Fixnum_Value(cell));
+    } else if (Is_Bignum(cell)) {
+        Bignum_Data &data = Get_Bignum_Data(cell);
+        double accum = 0;
+        for (size_t i = 0; i != data.size; ++i) {
+            double add = data.data[i];
+            for (size_t j = 0; j != i; ++j)
+                add *= digit_radix;
+            accum += add;
+        }
+        if (data.negative)
+            accum = -accum;
+        return accum;
+    } else if (Is_Rational(cell)) {
+        return Number_To_Double(Rational_Numerator(cell)) /
+               Number_To_Double(Rational_Denominator(cell));
+    } else {
+        return Real_Value(cell);
+    }
+}
+
+// Make two numbers have the same type. Takes the types as arguments
+// because the caller usually already calculated those. (Talk about
+// overactive optimization).
+Num_Type Align_Number_Types(Cell &one, Cell &two, Num_Type t_one,
+                            Num_Type t_two) {
+    MCell m_one = one, m_two = two;
+    while (t_one < t_two) {
+        m_one = Promote_Number(one, t_one);
+        t_one = static_cast<Num_Type>(static_cast<size_t>(t_one) + 1);
+    }
+    while (t_two < t_one) {
+        m_two = Promote_Number(two, t_two);
+        t_two = static_cast<Num_Type>(static_cast<size_t>(t_two) + 1);
+    }
+    one = m_one;
+    two = m_two;
+    return t_one;
+}
+
+
+// The following functions add, subtract, multiply and divide number
+// types. They first make the types the same by promoting the 'lower'
+// argument, and then apply the operations that are needed for that
+// type of number.
+Cell Number_Add(Cell one, Cell two) {
+    Num_Type t_one = Number_Type(one), t_two = Number_Type(two);
+    if (t_one != t_two)
+        t_one = Align_Number_Types(one, two, t_one, t_two);
+
+    switch (t_one) {
+    case n_fixnum: {
+        // Using 64-bit ints and Make_Integer, the numbers automatically
+        // become bignums when they get too fat.
+        int64 result =
+            static_cast<int64>(Fixnum_Value(one)) + Fixnum_Value(two);
+        return Make_Integer(result);
+    }
+    case n_bignum: {
+        Bignum_Data &d_one = Get_Bignum_Data(one),
+                    &d_two = Get_Bignum_Data(two);
+        Array_Buffer result(std::max(d_one.size, d_two.size) + 1);
+
+        // This is a little icky, but necessary because I use unsigned
+        // digits instead of a 2-complement system. An add of a negative
+        // and a positive number becomes a subtract.
+        if (d_one.negative == d_two.negative) {
+            Add_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                       result.data, result.size);
+            return Make_Integer(result.data, result.size, d_one.negative);
+        } else if (Array_Smaller(d_one.data, d_one.size, d_two.data,
+                                 d_two.size)) {
+            Subtract_Arrays(d_two.data, d_two.size, d_one.data, d_one.size,
+                            result.data, result.size);
+            return Make_Integer(result.data, result.size, d_two.negative);
+        } else {
+            Subtract_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                            result.data, result.size);
+            return Make_Integer(result.data, result.size, d_one.negative);
+        }
+    }
+    case n_rational: {
+        MCell m_one = one, m_two = two;
+        MCell numerator = Number_Multiply(Rational_Numerator(m_one),
+                                          Rational_Denominator(m_two));
+        MCell temp = Number_Multiply(Rational_Numerator(m_two),
+                                     Rational_Denominator(m_one));
+        numerator = Number_Add(numerator, temp);
+        Cell denominator = Number_Multiply(Rational_Denominator(m_one),
+                                           Rational_Denominator(m_two));
+        return Make_Simplified_Rational(numerator, denominator);
+    }
+    case n_real:
+        return Make_Real(Number_To_Double(one) + Number_To_Double(two));
+    }
+    return invalid_cell; // just to silence the compiler
+}
+
+Cell Number_Subtract(Cell one, Cell two) {
+    Num_Type t_one = Number_Type(one), t_two = Number_Type(two);
+    if (t_one != t_two)
+        t_one = Align_Number_Types(one, two, t_one, t_two);
+
+    switch (t_one) {
+    case n_fixnum: {
+        int64 result =
+            static_cast<int64>(Fixnum_Value(one)) - Fixnum_Value(two);
+        return Make_Integer(result);
+    }
+    case n_bignum: {
+        Bignum_Data &d_one = Get_Bignum_Data(one),
+                    &d_two = Get_Bignum_Data(two);
+        Array_Buffer result(std::max(d_one.size, d_two.size) + 1);
+
+        if (d_one.negative != d_two.negative) {
+            Add_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                       result.data, result.size);
+            return Make_Integer(result.data, result.size, d_one.negative);
+        } else if (Array_Smaller(d_one.data, d_one.size, d_two.data,
+                                 d_two.size)) {
+            Subtract_Arrays(d_two.data, d_two.size, d_one.data, d_one.size,
+                            result.data, result.size);
+            return Make_Integer(result.data, result.size, !d_one.negative);
+        } else {
+            Subtract_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                            result.data, result.size);
+            return Make_Integer(result.data, result.size, d_one.negative);
+        }
+    }
+    case n_rational: {
+        MCell m_one = one, m_two = two;
+        MCell numerator = Number_Multiply(Rational_Numerator(m_one),
+                                          Rational_Denominator(m_two));
+        MCell temp = Number_Multiply(Rational_Numerator(m_two),
+                                     Rational_Denominator(m_one));
+        numerator = Number_Subtract(numerator, temp);
+        Cell denominator = Number_Multiply(Rational_Denominator(m_one),
+                                           Rational_Denominator(m_two));
+        return Make_Simplified_Rational(numerator, denominator);
+    }
+    case n_real:
+        return Make_Real(Number_To_Double(one) - Number_To_Double(two));
+    }
+    return invalid_cell;
+}
+
+Cell Number_Multiply(Cell one, Cell two) {
+    Num_Type t_one = Number_Type(one), t_two = Number_Type(two);
+    if (t_one != t_two)
+        t_one = Align_Number_Types(one, two, t_one, t_two);
+
+    switch (t_one) {
+    case n_fixnum: {
+        int64 result =
+            static_cast<int64>(Fixnum_Value(one)) * Fixnum_Value(two);
+        return Make_Integer(result);
+    }
+    case n_bignum: {
+        Bignum_Data &d_one = Get_Bignum_Data(one),
+                    &d_two = Get_Bignum_Data(two);
+        Array_Buffer result(d_one.size + d_two.size);
+        Multiply_Arrays(d_one.data, d_one.size, d_two.data, d_two.size,
+                        result.data, result.size);
+        return Make_Integer(result.data, result.size,
+                            d_one.negative != d_two.negative);
+    }
+    case n_rational: {
+        MCell m_one = one, m_two = two;
+        MCell numerator = Number_Multiply(Rational_Numerator(m_one),
+                                          Rational_Numerator(m_two));
+        Cell denominator = Number_Multiply(Rational_Denominator(m_one),
+                                           Rational_Denominator(m_two));
+        return Make_Simplified_Rational(numerator, denominator);
+    }
+    case n_real:
+        return Make_Real(Number_To_Double(one) * Number_To_Double(two));
+    }
+    return invalid_cell;
+}
+
+Cell Number_Divide(Cell one, Cell two) {
+    Num_Type t_one = Number_Type(one), t_two = Number_Type(two);
+    // Divide for integers means becoming a rational number
+    if ((t_one == n_fixnum || t_one == n_bignum) &&
+        (t_two == n_fixnum || t_two == n_bignum))
+        return Make_Simplified_Rational(one, two);
+
+    if (t_one != t_two)
+        t_one = Align_Number_Types(one, two, t_one, t_two);
+
+    if (t_one == n_rational) {
+        MCell m_one = one, m_two = two;
+        MCell numerator = Number_Multiply(Rational_Numerator(m_one),
+                                          Rational_Denominator(m_two));
+        Cell denominator = Number_Multiply(Rational_Denominator(m_one),
+                                           Rational_Numerator(m_two));
+        return Make_Simplified_Rational(numerator, denominator);
+    } else {
+        return Make_Real(Number_To_Double(one) / Number_To_Double(two));
+    }
+}
+
+
+Cell Make_Real(double value) {
+    Cell retval = Allocate_Cell<double>(real_type, (std::byte) 0);
+    Extract<double>(retval) = value;
+    return retval;
+}
+
+
+Cell Greatest_Common_Divisor(Cell one, Cell two) {
+    S_ASSERT(Is_Integer(one) && Is_Integer(two));
+    MCell a = one, b = two;
+    if (Integer_Less(b, a))
+        std::swap<Cell>(a, b);
+
+    while (a != zero_cell) {
+        b = Integer_Remainder(b, a);
+        std::swap<Cell>(a, b);
+    }
+    return b;
+}
+
+
+// Make as simple a rational possible from two integers. Will return
+// an integer if the denominator ends up as one.
+Cell Make_Simplified_Rational(Cell numerator, Cell denominator) {
+    S_ASSERT(Is_Integer(numerator) && Is_Integer(denominator));
+
+    if (numerator == zero_cell)
+        return zero_cell;
+    S_CHECK(denominator != zero_cell,
+            "invalid rational number (denominator equals 0)");
+
+    MCell num = numerator, denom = denominator;
+    if (Integer_Negative(denom)) {
+        num = Number_Subtract(zero_cell, num);
+        denom = Number_Subtract(zero_cell, denom);
+    }
+
+    MCell common = Greatest_Common_Divisor(num, denom);
+    if (common != one_cell) {
+        num = Integer_Quotient(num, common);
+        denom = Integer_Quotient(denom, common);
+    }
+
+    if (denom == one_cell)
+        return num;
+    else
+        return Make_Rational(num, denom);
+}
+
+// A 'tower' system for numbers, the number types form a hierarchy an
+// can be promoted upwards.
+Num_Type Number_Type(Cell cell) {
+    S_ASSERT(Is_Number(cell));
+
+    if (Is_Fixnum(cell)) {
+        return n_fixnum;
+    } else {
+        S_ASSERT(Is_Compound(cell));
+        Cell_Type type = Get_Type(cell);
+        if (type == bignum_type)
+            return n_bignum;
+        else if (type == rational_type)
+            return n_rational;
+        else
+            return n_real;
     }
 }
 

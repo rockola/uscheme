@@ -36,10 +36,12 @@ namespace uls {
 typedef std::byte byte;
 typedef int64_t int64;
 typedef uint64_t uint64;
-const size_t byte_size = 8;
-const std::byte max_byte = (std::byte)0xFF;
-const std::uint16_t max_short = 0xFFFF;
+static constexpr size_t byte_size = 8;
+static constexpr std::byte max_byte = (std::byte)0xFF;
+static constexpr std::uint16_t max_short = 0xFFFF;
 // TODO 64-bit fixnums
-const size_t max_int = 0xFFFFFFFF;
+static constexpr size_t max_int = 0xFFFFFFFF;
+// Fixnums range from -max_fixnum to +max_fixnum
+static constexpr uintptr_t max_fixnum = (max_int >> 2);
 
 } // namespace uls

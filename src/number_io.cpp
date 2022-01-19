@@ -276,4 +276,26 @@ void Write_Array(std::ostream &stream, const digit *array, size_t size,
         stream << buffer[i - 1];
 }
 
+// Get a number from a string in any radix. Only used by the primitive
+// number->string, the standard output functions for the number types
+// already know their type and always use radix 10 so they can do this
+// simpler.
+std::string Number_To_String(Cell num, size_t radix) {
+    std::ostringstream output;
+    if (Is_Fixnum(num)) {
+        Write_Int(output, Fixnum_Value(num), radix);
+    } else if (Is_Bignum(num)) {
+        Bignum_Data &data = Get_Bignum_Data(num);
+        Write_Array(output, data.data, data.size, data.negative, radix);
+    } else if (Is_Real(num)) {
+        Write_Double(output, Real_Value(num), radix);
+    } else {
+        S_ASSERT(Is_Rational(num));
+        output << Number_To_String(Rational_Numerator(num), radix);
+        output << '/';
+        output << Number_To_String(Rational_Denominator(num), radix);
+    }
+    return output.str();
+}
+
 } // namespace uls
